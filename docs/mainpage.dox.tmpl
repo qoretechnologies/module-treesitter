@@ -1,0 +1,277 @@
+/** @mainpage Qore treesitter Module
+
+    @tableofcontents
+
+    @section treesitterintro treesitter Module Introduction
+
+    The \c treesitter module provides bindings to the <a href="https://tree-sitter.github.io/tree-sitter/">tree-sitter</a>
+    incremental parsing library for Qore. Tree-sitter is a parser generator tool and incremental parsing library that
+    can build a concrete syntax tree for a source file and efficiently update the syntax tree as the source file is edited.
+
+    This module is particularly useful for:
+    - Syntax highlighting
+    - Code navigation and analysis
+    - IDE-like features (code folding, outline views)
+    - Static analysis tools
+    - Code transformation tools
+
+    To use this module, use \c "%requires treesitter" in your code.
+
+    @section treesitter_languages Supported Languages
+
+    The module includes built-in support for the following languages:
+    - Python
+    - Java
+    - JSON
+    - YAML
+    - JavaScript
+    - SQL
+
+    @section treesitter_classes Classes
+
+    The module provides the following classes:
+
+    |!Class|!Description
+    |@ref TreeSitter::TreeSitterParser "TreeSitterParser"|Creates parsers for specific languages
+    |@ref TreeSitter::TreeSitterTree "TreeSitterTree"|Represents a parsed syntax tree
+    |@ref TreeSitter::TreeSitterNode "TreeSitterNode"|Represents a node in the syntax tree
+    |@ref TreeSitter::TreeSitterCursor "TreeSitterCursor"|Provides efficient tree traversal
+    |@ref TreeSitter::TreeSitterQuery "TreeSitterQuery"|Pattern matching on syntax trees
+
+    @section treesitter_examples Examples
+
+    @subsection treesitter_basic_parsing Basic Parsing
+
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+# Create a parser for Python
+TreeSitterParser parser("python");
+
+# Parse some code
+string code = "
+def hello(name):
+    print(f'Hello, {name}!')
+
+hello('World')
+";
+
+TreeSitterTree tree = parser.parse(code);
+TreeSitterNode root = tree.getRootNode();
+
+printf("Root type: %s\n", root.getType());
+printf("Child count: %d\n", root.getChildCount());
+
+# Print the S-expression representation
+printf("Tree structure:\n%s\n", root.toSexp());
+    @endcode
+
+    @subsection treesitter_tree_traversal Tree Traversal
+
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+sub printTree(TreeSitterNode node, int depth = 0) {
+    string indent = strmul("  ", depth);
+    printf("%s%s", indent, node.getType());
+    if (node.isNamed()) {
+        printf(" [%d:%d - %d:%d]",
+               node.getStartPoint().row, node.getStartPoint().column,
+               node.getEndPoint().row, node.getEndPoint().column);
+    }
+    printf("\n");
+
+    for (int i = 0; i < node.getNamedChildCount(); i++) {
+        printTree(node.getNamedChild(i), depth + 1);
+    }
+}
+
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def foo(): return 42");
+printTree(tree.getRootNode());
+    @endcode
+
+    @subsection treesitter_cursor_traversal Efficient Cursor Traversal
+
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("x = 1 + 2");
+TreeSitterNode root = tree.getRootNode();
+
+# Use a cursor for efficient traversal
+TreeSitterCursor cursor = root.getCursor();
+
+# Depth-first traversal
+sub traverse(TreeSitterCursor c) {
+    do {
+        TreeSitterNode node = c.getCurrentNode();
+        if (node.isNamed()) {
+            printf("Node: %s\n", node.getType());
+        }
+        if (c.gotoFirstChild()) {
+            traverse(c);
+            c.gotoParent();
+        }
+    } while (c.gotoNextSibling());
+}
+
+traverse(cursor);
+    @endcode
+
+    @subsection treesitter_query_example Query Pattern Matching
+
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+string python_code = "
+def add(a, b):
+    return a + b
+
+def multiply(x, y):
+    return x * y
+
+result = add(1, 2)
+";
+
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse(python_code);
+TreeSitterNode root = tree.getRootNode();
+
+# Find all function definitions
+TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+list<hash<auto>> matches = query.execute(root);
+
+printf("Found %d functions:\n", matches.size());
+foreach hash<auto> match in (matches) {
+    foreach hash<auto> capture in (match.captures) {
+        if (capture.name == "name") {
+            printf("  - Function: %s at line %d\n",
+                   capture.node.type, capture.node.start_row + 1);
+        }
+    }
+}
+    @endcode
+
+    @subsection treesitter_syntax_highlighting Syntax Highlighting
+
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+# Define highlight patterns
+string highlight_query = '
+    (string) @string
+    (integer) @number
+    (float) @number
+    (identifier) @variable
+    (function_definition name: (identifier) @function.definition)
+    (call function: (identifier) @function.call)
+    (comment) @comment
+    (keyword) @keyword
+';
+
+TreeSitterParser parser("python");
+TreeSitterQuery query("python", highlight_query);
+
+string code = "# Example\ndef greet(name):\n    print('Hello ' + name)";
+TreeSitterTree tree = parser.parse(code);
+list<hash<auto>> highlights = query.captures(tree.getRootNode());
+
+foreach hash<auto> h in (highlights) {
+    printf("Highlight '%s' at bytes %d-%d\n",
+           h.name, h.node.start_byte, h.node.end_byte);
+}
+    @endcode
+
+    @subsection treesitter_incremental Incremental Parsing
+
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+TreeSitterParser parser("python");
+
+# Initial parse
+string code1 = "def foo(): pass";
+TreeSitterTree tree1 = parser.parse(code1);
+
+# Make an edit: change "foo" to "bar"
+# Edit at byte 4, old end 7, new end 7 (same length)
+tree1.edit(4, 7, 7, 0, 4, 0, 7, 0, 7);
+
+# Parse incrementally - reuses unchanged parts
+string code2 = "def bar(): pass";
+TreeSitterTree tree2 = parser.parseIncremental(code2, tree1);
+
+# Check what changed
+list<hash<auto>> changes = tree1.getChangedRanges(tree2);
+printf("Changed ranges: %d\n", changes.size());
+    @endcode
+
+    @section treesitter_error_handling Error Handling
+
+    Tree-sitter performs error recovery during parsing, so you always get a valid tree
+    even for invalid syntax. You can detect errors using:
+
+    @code{.py}
+TreeSitterTree tree = parser.parse("def incomplete(");
+TreeSitterNode root = tree.getRootNode();
+
+if (root.hasError()) {
+    printf("Syntax errors detected!\n");
+
+    # Find error nodes
+    sub findErrors(TreeSitterNode node) {
+        if (node.isMissing()) {
+            printf("Missing node at %d:%d\n",
+                   node.getStartPoint().row, node.getStartPoint().column);
+        }
+        if (node.getType() == "ERROR") {
+            printf("Error node: %s\n", node.getText());
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            findErrors(node.getChild(i));
+        }
+    }
+    findErrors(root);
+}
+    @endcode
+
+    @section treesitter_release_notes Release Notes
+
+    @subsection treesitter_v1_0 treesitter Module Version 1.0
+    - Initial release with support for Python, Java, JSON, YAML, JavaScript, and SQL
+    - Full tree-sitter API: parsing, tree traversal, cursors, and queries
+    - Incremental parsing support
+    - Query pattern matching for syntax highlighting and code analysis
+
+    @section treesitterlicense License
+
+    The treesitter module is released under the <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a>.
+
+    Tree-sitter itself is released under the MIT license.
+*/

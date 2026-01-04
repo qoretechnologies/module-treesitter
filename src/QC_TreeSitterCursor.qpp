@@ -1,0 +1,161 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_TreeSitterCursor.qpp defines the TreeSitterCursor class */
+/*
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "treesitter-module.h"
+#include "TreeSitterCursor.h"
+#include "TreeSitterNode.h"
+
+//! The TreeSitterCursor class provides efficient tree traversal
+/** The TreeSitterCursor class provides efficient tree traversal. A cursor is more
+    memory-efficient than using node methods for traversal when visiting many nodes,
+    as it reuses internal state.
+
+    @par Example:
+    @code{.py}
+TreeSitterCursor cursor = root.getCursor();
+# Traverse depth-first
+do {
+    TreeSitterNode node = cursor.getCurrentNode();
+    printf("Visiting: %s\n", node.getType());
+} while (cursor.gotoNextSibling() || cursor.gotoParent() && cursor.gotoNextSibling());
+    @endcode
+
+    @since treesitter 1.0
+*/
+qclass TreeSitterCursor [arg=TreeSitterCursor* cursor; ns=TreeSitter; vparent=Qore::Serializable];
+
+//! Create a cursor starting at the given node
+/** @param node the starting node for the cursor
+*/
+TreeSitterCursor::constructor(TreeSitterNode[TreeSitterNode] node) {
+    ReferenceHolder<TreeSitterNode> holder(node, xsink);
+    self->setPrivate(CID_TREESITTERCURSOR, new TreeSitterCursor(node));
+}
+
+//! Destroys the cursor
+/**
+*/
+TreeSitterCursor::destructor() {
+    cursor->deref(xsink);
+}
+
+//! Returns a copy of the cursor at its current position
+/**
+*/
+TreeSitterCursor::copy() {
+    TreeSitterCursor* c = cursor->copy();
+    self->setPrivate(CID_TREESITTERCURSOR, c);
+}
+
+//! Reset the cursor to a new starting node
+/** @param node the new starting node
+*/
+nothing TreeSitterCursor::reset(TreeSitterNode[TreeSitterNode] node) {
+    ReferenceHolder<TreeSitterNode> holder(node, xsink);
+    cursor->reset(node);
+}
+
+//! Get the node at the current cursor position
+/** @return the current node
+*/
+TreeSitterNode TreeSitterCursor::getCurrentNode() {
+    TreeSitterNode* n = cursor->getCurrentNode();
+    if (!n) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), n);
+}
+
+//! Get the field name of the current node (if it's a field child)
+/** @return the field name, or NOTHING if the current node is not a named field
+*/
+*string TreeSitterCursor::getCurrentFieldName() {
+    const char* name = cursor->getCurrentFieldName();
+    if (!name) {
+        return QoreValue();
+    }
+    return new QoreStringNode(name);
+}
+
+//! Move to the parent node
+/** @return True if successful, False if already at the root
+*/
+bool TreeSitterCursor::gotoParent() {
+    return cursor->gotoParent();
+}
+
+//! Move to the next sibling
+/** @return True if successful, False if no next sibling
+*/
+bool TreeSitterCursor::gotoNextSibling() {
+    return cursor->gotoNextSibling();
+}
+
+//! Move to the previous sibling
+/** @return True if successful, False if no previous sibling
+*/
+bool TreeSitterCursor::gotoPrevSibling() {
+    return cursor->gotoPrevSibling();
+}
+
+//! Move to the first child
+/** @return True if successful, False if no children
+*/
+bool TreeSitterCursor::gotoFirstChild() {
+    return cursor->gotoFirstChild();
+}
+
+//! Move to the last child
+/** @return True if successful, False if no children
+*/
+bool TreeSitterCursor::gotoLastChild() {
+    return cursor->gotoLastChild();
+}
+
+//! Move to the first child that extends beyond the given byte offset
+/** @param byte_offset the byte offset to search for
+
+    @return the index of the child if found, or -1 if not found
+
+    This is useful for finding the node at a particular position in the source.
+*/
+int TreeSitterCursor::gotoFirstChildForByte(int byte_offset) {
+    return cursor->gotoFirstChildForByte(byte_offset);
+}
+
+//! Move to the first child that extends beyond the given point
+/** @param row the row (0-indexed)
+    @param column the column (0-indexed)
+
+    @return the index of the child if found, or -1 if not found
+*/
+int TreeSitterCursor::gotoFirstChildForPoint(int row, int column) {
+    TSPoint point = {static_cast<uint32_t>(row), static_cast<uint32_t>(column)};
+    return cursor->gotoFirstChildForPoint(point);
+}
+
+//! Get the depth of the current node in the tree
+/** @return the depth (0 for root)
+*/
+int TreeSitterCursor::getCurrentDepth() {
+    return cursor->getCurrentDepth();
+}

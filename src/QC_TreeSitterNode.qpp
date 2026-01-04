@@ -1,0 +1,422 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_TreeSitterNode.qpp defines the TreeSitterNode class */
+/*
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "treesitter-module.h"
+#include "TreeSitterNode.h"
+#include "TreeSitterCursor.h"
+
+#include <vector>
+
+//! The TreeSitterNode class represents a single node in a tree-sitter syntax tree
+/** The TreeSitterNode class represents a node in the syntax tree. Each node has a type
+    (e.g., "function_definition", "identifier"), position information, and may have children.
+
+    @since treesitter 1.0
+*/
+qclass TreeSitterNode [arg=TreeSitterNode* node; ns=TreeSitter; vparent=Qore::Serializable];
+
+//! This class cannot be instantiated directly; nodes are obtained from TreeSitterTree
+/** @throw TREESITTERNODE-CONSTRUCTOR-ERROR this class cannot be directly instantiated
+*/
+TreeSitterNode::constructor() {
+    xsink->raiseException("TREESITTERNODE-CONSTRUCTOR-ERROR",
+        "TreeSitterNode objects must be obtained from TreeSitterTree");
+}
+
+//! Destroys the node reference
+/**
+*/
+TreeSitterNode::destructor() {
+    node->deref(xsink);
+}
+
+//! Returns a copy of the node
+/**
+*/
+TreeSitterNode::copy() {
+    self->setPrivate(CID_TREESITTERNODE,
+        new TreeSitterNode(node->getNode(), std::string(node->getText()->c_str())));
+}
+
+//! Get the type of this node
+/** @return the node type string (e.g., "function_definition", "identifier", "string")
+
+    @par Example:
+    @code{.py}
+string type = node.getType();
+if (type == "function_definition") {
+    # Handle function definition
+}
+    @endcode
+*/
+string TreeSitterNode::getType() {
+    return new QoreStringNode(node->getType());
+}
+
+//! Get the start byte position of this node
+/** @return the byte offset where this node starts in the source
+*/
+int TreeSitterNode::getStartByte() {
+    return node->getStartByte();
+}
+
+//! Get the end byte position of this node
+/** @return the byte offset where this node ends in the source
+*/
+int TreeSitterNode::getEndByte() {
+    return node->getEndByte();
+}
+
+//! Get the start position as row and column
+/** @return a hash with "row" and "column" keys (0-indexed)
+
+    @par Example:
+    @code{.py}
+hash<auto> pos = node.getStartPoint();
+printf("Node starts at line %d, column %d\n", pos.row + 1, pos.column + 1);
+    @endcode
+*/
+hash<auto> TreeSitterNode::getStartPoint() {
+    TSPoint p = node->getStartPoint();
+    QoreHashNode* h = new QoreHashNode(autoTypeInfo);
+    h->setKeyValue("row", static_cast<int64>(p.row), xsink);
+    h->setKeyValue("column", static_cast<int64>(p.column), xsink);
+    return h;
+}
+
+//! Get the end position as row and column
+/** @return a hash with "row" and "column" keys (0-indexed)
+*/
+hash<auto> TreeSitterNode::getEndPoint() {
+    TSPoint p = node->getEndPoint();
+    QoreHashNode* h = new QoreHashNode(autoTypeInfo);
+    h->setKeyValue("row", static_cast<int64>(p.row), xsink);
+    h->setKeyValue("column", static_cast<int64>(p.column), xsink);
+    return h;
+}
+
+//! Get the text content of this node
+/** @return the source text covered by this node
+
+    @par Example:
+    @code{.py}
+string text = node.getText();
+printf("Node text: %s\n", text);
+    @endcode
+*/
+string TreeSitterNode::getText() {
+    return node->getText();
+}
+
+//! Get the number of children (including anonymous nodes)
+/** @return the total child count
+*/
+int TreeSitterNode::getChildCount() {
+    return node->getChildCount();
+}
+
+//! Get a child by index
+/** @param index the child index (0-based)
+
+    @return the child node, or NOTHING if index is out of range
+*/
+*TreeSitterNode TreeSitterNode::getChild(int index) {
+    TreeSitterNode* child = node->getChild(index);
+    if (!child) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), child);
+}
+
+//! Get a child by field name
+/** @param field_name the field name (e.g., "name", "body", "parameters")
+
+    @return the child node, or NOTHING if no child with that field name exists
+
+    @par Example:
+    @code{.py}
+# For a function definition, get the name and body
+*TreeSitterNode name = func_node.getChildByFieldName("name");
+*TreeSitterNode body = func_node.getChildByFieldName("body");
+    @endcode
+*/
+*TreeSitterNode TreeSitterNode::getChildByFieldName(string field_name) {
+    TreeSitterNode* child = node->getChildByFieldName(field_name->c_str());
+    if (!child) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), child);
+}
+
+//! Get the number of named children (excluding anonymous nodes like punctuation)
+/** @return the named child count
+*/
+int TreeSitterNode::getNamedChildCount() {
+    return node->getNamedChildCount();
+}
+
+//! Get a named child by index
+/** @param index the named child index (0-based)
+
+    @return the named child node, or NOTHING if index is out of range
+*/
+*TreeSitterNode TreeSitterNode::getNamedChild(int index) {
+    TreeSitterNode* child = node->getNamedChild(index);
+    if (!child) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), child);
+}
+
+//! Get the parent node
+/** @return the parent node, or NOTHING if this is the root node
+*/
+*TreeSitterNode TreeSitterNode::getParent() {
+    TreeSitterNode* parent = node->getParent();
+    if (!parent) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), parent);
+}
+
+//! Get the next sibling node
+/** @return the next sibling, or NOTHING if none
+*/
+*TreeSitterNode TreeSitterNode::getNextSibling() {
+    TreeSitterNode* sibling = node->getNextSibling();
+    if (!sibling) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), sibling);
+}
+
+//! Get the previous sibling node
+/** @return the previous sibling, or NOTHING if none
+*/
+*TreeSitterNode TreeSitterNode::getPrevSibling() {
+    TreeSitterNode* sibling = node->getPrevSibling();
+    if (!sibling) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), sibling);
+}
+
+//! Get the next named sibling node
+/** @return the next named sibling, or NOTHING if none
+*/
+*TreeSitterNode TreeSitterNode::getNextNamedSibling() {
+    TreeSitterNode* sibling = node->getNextNamedSibling();
+    if (!sibling) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), sibling);
+}
+
+//! Get the previous named sibling node
+/** @return the previous named sibling, or NOTHING if none
+*/
+*TreeSitterNode TreeSitterNode::getPrevNamedSibling() {
+    TreeSitterNode* sibling = node->getPrevNamedSibling();
+    if (!sibling) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), sibling);
+}
+
+//! Check if this is a named node
+/** @return True if this node has a name in the grammar (not anonymous punctuation)
+
+    Named nodes represent meaningful syntactic constructs, while anonymous nodes
+    represent punctuation and keywords.
+*/
+bool TreeSitterNode::isNamed() {
+    return node->isNamed();
+}
+
+//! Check if this node is missing (inserted by error recovery)
+/** @return True if this node was inserted by the parser's error recovery
+
+    Missing nodes indicate that the parser expected something that wasn't in the source.
+*/
+bool TreeSitterNode::isMissing() {
+    return node->isMissing();
+}
+
+//! Check if this node or any descendant has an error
+/** @return True if there's a syntax error in or under this node
+*/
+bool TreeSitterNode::hasError() {
+    return node->hasError();
+}
+
+//! Check if this is an "extra" node (like a comment)
+/** @return True if this node is "extra" according to the grammar
+*/
+bool TreeSitterNode::isExtra() {
+    return node->isExtra();
+}
+
+//! Get all children as a list
+/** @return a list of all child nodes (including anonymous)
+
+    @par Example:
+    @code{.py}
+list<TreeSitterNode> children = node.getChildren();
+foreach TreeSitterNode child in (children) {
+    printf("Child type: %s\n", child.getType());
+}
+    @endcode
+*/
+list<TreeSitterNode> TreeSitterNode::getChildren() {
+    std::vector<TreeSitterNode*> children = node->getChildren();
+    ReferenceHolder<QoreListNode> list(new QoreListNode(QC_TREESITTERNODE->getTypeInfo()), xsink);
+    for (TreeSitterNode* child : children) {
+        list->push(new QoreObject(QC_TREESITTERNODE, getProgram(), child), xsink);
+    }
+    return list.release();
+}
+
+//! Get all named children as a list
+/** @return a list of all named child nodes
+*/
+list<TreeSitterNode> TreeSitterNode::getNamedChildren() {
+    std::vector<TreeSitterNode*> children = node->getNamedChildren();
+    ReferenceHolder<QoreListNode> list(new QoreListNode(QC_TREESITTERNODE->getTypeInfo()), xsink);
+    for (TreeSitterNode* child : children) {
+        list->push(new QoreObject(QC_TREESITTERNODE, getProgram(), child), xsink);
+    }
+    return list.release();
+}
+
+//! Get detailed information about this node as a hash
+/** @return a hash containing:
+    - \c type: the node type
+    - \c start_byte: start byte position
+    - \c end_byte: end byte position
+    - \c start_row: start row (0-indexed)
+    - \c start_column: start column (0-indexed)
+    - \c end_row: end row
+    - \c end_column: end column
+    - \c is_named: whether this is a named node
+    - \c is_missing: whether this node was inserted by error recovery
+    - \c has_error: whether this node or descendants have errors
+    - \c text: the node's text content
+*/
+hash<auto> TreeSitterNode::toHash() {
+    return node->toHash();
+}
+
+//! Get the S-expression representation of the subtree
+/** @return an S-expression string showing the tree structure
+
+    @par Example:
+    @code{.py}
+string sexp = node.toSexp();
+# Output: (module (function_definition name: (identifier) ...))
+    @endcode
+*/
+string TreeSitterNode::toSexp() {
+    return node->toSexp();
+}
+
+//! Find the smallest node that spans the given byte range
+/** @param start the start byte
+    @param end the end byte
+
+    @return the descendant node, or NOTHING if not found
+*/
+*TreeSitterNode TreeSitterNode::getDescendantForByteRange(int start, int end) {
+    TreeSitterNode* desc = node->getDescendantForByteRange(start, end);
+    if (!desc) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), desc);
+}
+
+//! Find the smallest named node that spans the given byte range
+/** @param start the start byte
+    @param end the end byte
+
+    @return the named descendant node, or NOTHING if not found
+*/
+*TreeSitterNode TreeSitterNode::getNamedDescendantForByteRange(int start, int end) {
+    TreeSitterNode* desc = node->getNamedDescendantForByteRange(start, end);
+    if (!desc) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), desc);
+}
+
+//! Find the smallest node that spans the given point range
+/** @param start_row the start row
+    @param start_column the start column
+    @param end_row the end row
+    @param end_column the end column
+
+    @return the descendant node, or NOTHING if not found
+*/
+*TreeSitterNode TreeSitterNode::getDescendantForPointRange(int start_row, int start_column,
+                                                            int end_row, int end_column) {
+    TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
+    TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
+    TreeSitterNode* desc = node->getDescendantForPointRange(start, end);
+    if (!desc) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), desc);
+}
+
+//! Find the smallest named node that spans the given point range
+/** @param start_row the start row
+    @param start_column the start column
+    @param end_row the end row
+    @param end_column the end column
+
+    @return the named descendant node, or NOTHING if not found
+*/
+*TreeSitterNode TreeSitterNode::getNamedDescendantForPointRange(int start_row, int start_column,
+                                                                  int end_row, int end_column) {
+    TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
+    TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
+    TreeSitterNode* desc = node->getNamedDescendantForPointRange(start, end);
+    if (!desc) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), desc);
+}
+
+//! Create a cursor for efficient tree traversal starting at this node
+/** @return a new TreeSitterCursor positioned at this node
+*/
+TreeSitterCursor TreeSitterNode::getCursor() {
+    return new QoreObject(QC_TREESITTERCURSOR, getProgram(), new TreeSitterCursor(node));
+}
+
+//! Compare with another node for equality
+/** @param other the other node to compare with
+
+    @return True if the nodes represent the same position in the same tree
+*/
+bool TreeSitterNode::equals(TreeSitterNode[TreeSitterNode] other) {
+    ReferenceHolder<TreeSitterNode> holder(other, xsink);
+    return node->equals(other);
+}

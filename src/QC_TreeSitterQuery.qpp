@@ -1,0 +1,208 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_TreeSitterQuery.qpp defines the TreeSitterQuery class */
+/*
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "treesitter-module.h"
+#include "TreeSitterQuery.h"
+#include "TreeSitterNode.h"
+
+//! The TreeSitterQuery class provides pattern matching on syntax trees
+/** The TreeSitterQuery class provides pattern matching on syntax trees.
+    Queries use S-expression patterns to match nodes in the tree.
+
+    @par Example:
+    @code{.py}
+# Find all function definitions and their names
+TreeSitterQuery query("python", "(function_definition name: (identifier) @func_name) @func");
+list<hash<auto>> matches = query.execute(root);
+foreach hash<auto> match in (matches) {
+    foreach hash<auto> capture in (match.captures) {
+        printf("Capture '%s': type=%s\n", capture.name, capture.node.type);
+    }
+}
+    @endcode
+
+    @par Query Syntax
+    Queries use S-expression patterns with the following features:
+    - \c (node_type) matches a node of that type
+    - \c (node_type field: (child_type)) matches a node with a specific field
+    - \c \@capture_name captures the matched node with a name
+    - \c (node_type (child_type)+) matches one or more children
+    - \c (node_type (child_type)?) matches zero or one child
+    - \c (node_type (child_type)*) matches zero or more children
+    - \c (node_type (#eq? @capture "text")) matches nodes with specific text
+
+    @since treesitter 1.0
+*/
+qclass TreeSitterQuery [arg=TreeSitterQuery* query; ns=TreeSitter; vparent=Qore::Serializable];
+
+//! Create a query for the given language
+/** @param language the language name (e.g., "python", "java")
+    @param pattern the S-expression query pattern
+
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+    @throw TREESITTER-QUERY-ERROR if the query pattern is invalid
+
+    @par Example:
+    @code{.py}
+# Query to find all string literals
+TreeSitterQuery query("python", "(string) @str");
+
+# Query to find all function calls
+TreeSitterQuery query("python", "(call function: (identifier) @func_name) @call");
+
+# Query to find all imports
+TreeSitterQuery query("python", "(import_statement) @import");
+    @endcode
+*/
+TreeSitterQuery::constructor(string language, string pattern) {
+    ReferenceHolder<TreeSitterQuery> holder(
+        new TreeSitterQuery(language->c_str(), pattern->c_str(), xsink), xsink);
+    if (*xsink) {
+        return;
+    }
+    if (!holder->isValid()) {
+        return;
+    }
+    self->setPrivate(CID_TREESITTERQUERY, holder.release());
+}
+
+//! Destroys the query
+/**
+*/
+TreeSitterQuery::destructor() {
+    query->deref(xsink);
+}
+
+//! Returns a copy of the query
+/**
+*/
+TreeSitterQuery::copy() {
+    xsink->raiseException("TREESITTERQUERY-COPY-ERROR",
+        "TreeSitterQuery objects cannot be copied; create a new query instead");
+}
+
+//! Execute the query on a node and return all matches
+/** @param node the node to search (usually the root node)
+
+    @return a list of match hashes, each containing:
+    - \c pattern_index: the index of the matched pattern
+    - \c captures: a list of capture hashes with:
+      - \c name: the capture name (without @)
+      - \c node: a hash with node information (type, positions)
+
+    @par Example:
+    @code{.py}
+TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+list<hash<auto>> matches = query.execute(root);
+
+foreach hash<auto> match in (matches) {
+    printf("Pattern %d matched:\n", match.pattern_index);
+    foreach hash<auto> capture in (match.captures) {
+        printf("  %s: %s at byte %d\n", capture.name, capture.node.type, capture.node.start_byte);
+    }
+}
+    @endcode
+*/
+list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node) {
+    ReferenceHolder<TreeSitterNode> holder(node, xsink);
+    return query->execute(node, xsink);
+}
+
+//! Execute the query and return all captures in order
+/** @param node the node to search
+
+    @return a list of capture hashes, each containing:
+    - \c name: the capture name
+    - \c pattern_index: which pattern this capture came from
+    - \c node: a hash with node information
+
+    Unlike execute(), this method returns captures in the order they appear
+    in the source, which is useful for syntax highlighting.
+
+    @par Example:
+    @code{.py}
+# Syntax highlighting query with multiple patterns
+string highlight_query = "
+    (string) @string
+    (number) @number
+    (identifier) @variable
+    (function_definition name: (identifier) @function)
+    (comment) @comment
+";
+TreeSitterQuery query("python", highlight_query);
+list<hash<auto>> captures = query.captures(root);
+
+foreach hash<auto> cap in (captures) {
+    printf("Highlight %s at bytes %d-%d\n",
+           cap.name, cap.node.start_byte, cap.node.end_byte);
+}
+    @endcode
+*/
+list<hash<auto>> TreeSitterQuery::captures(TreeSitterNode[TreeSitterNode] node) {
+    ReferenceHolder<TreeSitterNode> holder(node, xsink);
+    return query->captures(node, xsink);
+}
+
+//! Get the number of patterns in the query
+/** @return the pattern count
+*/
+int TreeSitterQuery::getPatternCount() {
+    return query->getPatternCount();
+}
+
+//! Get the number of capture names in the query
+/** @return the capture count
+*/
+int TreeSitterQuery::getCaptureCount() {
+    return query->getCaptureCount();
+}
+
+//! Get a capture name by index
+/** @param index the capture index
+
+    @return the capture name (without @)
+*/
+*string TreeSitterQuery::getCaptureName(int index) {
+    const char* name = query->getCaptureName(index);
+    if (!name) {
+        return QoreValue();
+    }
+    return new QoreStringNode(name);
+}
+
+//! Disable a capture by name
+/** @param name the capture name to disable (without @)
+
+    Disabled captures will not be included in query results.
+*/
+nothing TreeSitterQuery::disableCapture(string name) {
+    query->disableCapture(name->c_str());
+}
+
+//! Disable a pattern by index
+/** @param pattern_index the pattern index to disable
+
+    Disabled patterns will not be matched during query execution.
+*/
+nothing TreeSitterQuery::disablePattern(int pattern_index) {
+    query->disablePattern(pattern_index);
+}

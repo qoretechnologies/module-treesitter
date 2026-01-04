@@ -1,0 +1,140 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_TreeSitterTree.qpp defines the TreeSitterTree class */
+/*
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "treesitter-module.h"
+#include "TreeSitterTree.h"
+#include "TreeSitterNode.h"
+
+//! The TreeSitterTree class represents a parsed syntax tree from tree-sitter
+/** The TreeSitterTree class represents a parsed syntax tree.
+
+    @since treesitter 1.0
+*/
+qclass TreeSitterTree [arg=TreeSitterTree* tree; ns=TreeSitter; vparent=Qore::Serializable];
+
+//! This class cannot be instantiated directly; use TreeSitterParser::parse() instead
+/** @throw TREESITTERTREE-CONSTRUCTOR-ERROR this class cannot be directly instantiated
+*/
+TreeSitterTree::constructor() {
+    xsink->raiseException("TREESITTERTREE-CONSTRUCTOR-ERROR",
+        "TreeSitterTree objects must be created using TreeSitterParser::parse()");
+}
+
+//! Destroys the tree
+/**
+*/
+TreeSitterTree::destructor() {
+    tree->deref(xsink);
+}
+
+//! Returns a copy of the tree
+/**
+*/
+TreeSitterTree::copy() {
+    TreeSitterTree* tree_copy = tree->copy();
+    if (!tree_copy) {
+        xsink->raiseException("TREESITTERTREE-COPY-ERROR", "Failed to copy tree");
+        return;
+    }
+    self->setPrivate(CID_TREESITTERTREE, tree_copy);
+}
+
+//! Get the root node of the syntax tree
+/** @return the root TreeSitterNode of the tree
+
+    @par Example:
+    @code{.py}
+TreeSitterNode root = tree.getRootNode();
+printf("Root type: %s\n", root.getType());
+    @endcode
+*/
+TreeSitterNode TreeSitterTree::getRootNode() {
+    TreeSitterNode* root = tree->getRootNode();
+    if (!root) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERNODE, getProgram(), root);
+}
+
+//! Get the original source code that was parsed
+/** @return the source code string
+*/
+string TreeSitterTree::getSource() {
+    return new QoreStringNode(tree->getSource());
+}
+
+//! Edit the tree to reflect a change in the source code
+/** @param start_byte the byte offset where the change starts
+    @param old_end_byte the byte offset where the old content ended
+    @param new_end_byte the byte offset where the new content ends
+    @param start_row the row (0-indexed) where the change starts
+    @param start_column the column (0-indexed) where the change starts
+    @param old_end_row the row where the old content ended
+    @param old_end_column the column where the old content ended
+    @param new_end_row the row where the new content ends
+    @param new_end_column the column where the new content ends
+
+    This method should be called before parseIncremental() to inform the parser
+    about what parts of the source code have changed. This enables efficient
+    incremental re-parsing.
+
+    @par Example:
+    @code{.py}
+# Original: "def foo():"
+# New:      "def bar():"
+# The change is at byte 4, old length 3, new length 3
+tree.edit(4, 7, 7, 0, 4, 0, 7, 0, 7);
+    @endcode
+*/
+nothing TreeSitterTree::edit(int start_byte, int old_end_byte, int new_end_byte,
+                              int start_row, int start_column,
+                              int old_end_row, int old_end_column,
+                              int new_end_row, int new_end_column) {
+    tree->edit(start_byte, old_end_byte, new_end_byte,
+               start_row, start_column,
+               old_end_row, old_end_column,
+               new_end_row, new_end_column);
+}
+
+//! Get the ranges that have changed between this tree and another
+/** @param other the other tree to compare with
+
+    @return a list of hashes describing the changed ranges, each with keys:
+    - \c start_byte: the start byte offset
+    - \c end_byte: the end byte offset
+    - \c start_row: the start row
+    - \c start_column: the start column
+    - \c end_row: the end row
+    - \c end_column: the end column
+
+    @par Example:
+    @code{.py}
+list<hash<auto>> changes = old_tree.getChangedRanges(new_tree);
+foreach hash<auto> range in (changes) {
+    printf("Changed: bytes %d-%d\n", range.start_byte, range.end_byte);
+}
+    @endcode
+*/
+list<hash<auto>> TreeSitterTree::getChangedRanges(TreeSitterTree[TreeSitterTree] other) {
+    ReferenceHolder<TreeSitterTree> holder(other, xsink);
+    return tree->getChangedRanges(other, xsink);
+}

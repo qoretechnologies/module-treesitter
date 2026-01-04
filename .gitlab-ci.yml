@@ -1,0 +1,81 @@
+stages:
+  - build
+  - test
+
+variables:
+  GIT_DEPTH: 1
+  GIT_SUBMODULE_STRATEGY: recursive
+
+.build_template: &build_template
+  stage: build
+  script:
+    - mkdir -p build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=Debug
+    - make -j$(nproc)
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 day
+
+.test_template: &test_template
+  stage: test
+  script:
+    - export QORE_MODULE_DIR=$CI_PROJECT_DIR/build
+    - qore test/treesitter.qtest -v
+
+build:ubuntu-22.04:
+  <<: *build_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-22.04
+  tags:
+    - docker
+
+build:ubuntu-24.04:
+  <<: *build_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-24.04
+  tags:
+    - docker
+
+build:rocky-9:
+  <<: *build_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:rocky-9
+  tags:
+    - docker
+
+build:alpine:
+  <<: *build_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:alpine
+  tags:
+    - docker
+
+test:ubuntu-22.04:
+  <<: *test_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-22.04
+  dependencies:
+    - build:ubuntu-22.04
+  tags:
+    - docker
+
+test:ubuntu-24.04:
+  <<: *test_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-24.04
+  dependencies:
+    - build:ubuntu-24.04
+  tags:
+    - docker
+
+test:rocky-9:
+  <<: *test_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:rocky-9
+  dependencies:
+    - build:rocky-9
+  tags:
+    - docker
+
+test:alpine:
+  <<: *test_template
+  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:alpine
+  dependencies:
+    - build:alpine
+  tags:
+    - docker

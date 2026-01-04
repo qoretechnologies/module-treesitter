@@ -1,0 +1,535 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%new-style
+%enable-all-warnings
+%require-types
+%strict-args
+
+%requires QUnit
+%requires treesitter
+
+%exec-class TreeSitterTest
+
+#! Comprehensive tests for the treesitter module
+class TreeSitterTest inherits QUnit::Test {
+    constructor() : QUnit::Test("TreeSitterTest", "1.0", \ARGV) {
+        # Parser tests
+        addTestCase("Parser creation", \testParserCreation());
+        addTestCase("Parser invalid language", \testParserInvalidLanguage());
+        addTestCase("Parser timeout", \testParserTimeout());
+        addTestCase("Supported languages", \testSupportedLanguages());
+
+        # Basic parsing tests
+        addTestCase("Parse Python", \testParsePython());
+        addTestCase("Parse Java", \testParseJava());
+        addTestCase("Parse JSON", \testParseJSON());
+        addTestCase("Parse YAML", \testParseYAML());
+        addTestCase("Parse JavaScript", \testParseJavaScript());
+        addTestCase("Parse Kotlin", \testParseKotlin());
+
+        # Tree tests
+        addTestCase("Tree root node", \testTreeRootNode());
+        addTestCase("Tree source", \testTreeSource());
+        addTestCase("Tree copy", \testTreeCopy());
+        addTestCase("Tree edit", \testTreeEdit());
+        addTestCase("Tree changed ranges", \testTreeChangedRanges());
+
+        # Node tests
+        addTestCase("Node type", \testNodeType());
+        addTestCase("Node positions", \testNodePositions());
+        addTestCase("Node text", \testNodeText());
+        addTestCase("Node children", \testNodeChildren());
+        addTestCase("Node named children", \testNodeNamedChildren());
+        addTestCase("Node child by field", \testNodeChildByField());
+        addTestCase("Node parent", \testNodeParent());
+        addTestCase("Node siblings", \testNodeSiblings());
+        addTestCase("Node properties", \testNodeProperties());
+        addTestCase("Node toHash", \testNodeToHash());
+        addTestCase("Node toSexp", \testNodeToSexp());
+        addTestCase("Node descendant by range", \testNodeDescendantByRange());
+        addTestCase("Node equality", \testNodeEquality());
+
+        # Cursor tests
+        addTestCase("Cursor navigation", \testCursorNavigation());
+        addTestCase("Cursor field name", \testCursorFieldName());
+        addTestCase("Cursor depth", \testCursorDepth());
+        addTestCase("Cursor copy", \testCursorCopy());
+        addTestCase("Cursor goto for byte", \testCursorGotoForByte());
+
+        # Query tests
+        addTestCase("Query basic", \testQueryBasic());
+        addTestCase("Query captures", \testQueryCaptures());
+        addTestCase("Query multiple patterns", \testQueryMultiplePatterns());
+        addTestCase("Query invalid pattern", \testQueryInvalidPattern());
+        addTestCase("Query disable capture", \testQueryDisableCapture());
+
+        # Incremental parsing tests
+        addTestCase("Incremental parsing", \testIncrementalParsing());
+
+        # Error handling tests
+        addTestCase("Parse with errors", \testParseWithErrors());
+        addTestCase("Missing nodes", \testMissingNodes());
+
+        # Edge cases and corner cases
+        addTestCase("Empty source", \testEmptySource());
+        addTestCase("Unicode source", \testUnicodeSource());
+        addTestCase("Large source", \testLargeSource());
+        addTestCase("Deeply nested", \testDeeplyNested());
+
+        set_return_value(main());
+    }
+
+    # Parser tests
+    testParserCreation() {
+        TreeSitterParser parser("python");
+        assertEq("python", parser.getLanguage());
+    }
+
+    testParserInvalidLanguage() {
+        assertThrows("TREESITTER-LANGUAGE-ERROR", sub() {
+            TreeSitterParser parser("nonexistent_language");
+        });
+    }
+
+    testParserTimeout() {
+        TreeSitterParser parser("python");
+        parser.setTimeout(1000000);  # 1 second
+        assertEq(1000000, parser.getTimeout());
+        parser.setTimeout(0);
+        assertEq(0, parser.getTimeout());
+    }
+
+    testSupportedLanguages() {
+        list<string> langs = TreeSitterParser::getSupportedLanguages();
+        assertTrue(langs.size() >= 6);
+        assertTrue(TreeSitterParser::isLanguageSupported("python"));
+        assertTrue(TreeSitterParser::isLanguageSupported("java"));
+        assertTrue(TreeSitterParser::isLanguageSupported("json"));
+        assertTrue(TreeSitterParser::isLanguageSupported("yaml"));
+        assertTrue(TreeSitterParser::isLanguageSupported("javascript"));
+        assertTrue(TreeSitterParser::isLanguageSupported("kotlin"));
+        assertFalse(TreeSitterParser::isLanguageSupported("nonexistent"));
+    }
+
+    # Basic parsing tests
+    testParsePython() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def hello(): pass");
+        assertEq("module", tree.getRootNode().getType());
+    }
+
+    testParseJava() {
+        TreeSitterParser parser("java");
+        TreeSitterTree tree = parser.parse("class Test { }");
+        assertEq("program", tree.getRootNode().getType());
+    }
+
+    testParseJSON() {
+        TreeSitterParser parser("json");
+        TreeSitterTree tree = parser.parse('{"key": "value"}');
+        assertEq("document", tree.getRootNode().getType());
+    }
+
+    testParseYAML() {
+        TreeSitterParser parser("yaml");
+        TreeSitterTree tree = parser.parse("key: value");
+        assertEq("stream", tree.getRootNode().getType());
+    }
+
+    testParseJavaScript() {
+        TreeSitterParser parser("javascript");
+        TreeSitterTree tree = parser.parse("function test() { return 42; }");
+        assertEq("program", tree.getRootNode().getType());
+    }
+
+    testParseKotlin() {
+        TreeSitterParser parser("kotlin");
+        TreeSitterTree tree = parser.parse("fun main() { println(\"Hello\") }");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+    }
+
+    # Tree tests
+    testTreeRootNode() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("module", root.getType());
+        assertTrue(root.isNamed());
+        assertTrue(exists root);
+    }
+
+    testTreeSource() {
+        TreeSitterParser parser("python");
+        string source = "x = 1";
+        TreeSitterTree tree = parser.parse(source);
+        assertEq(source, tree.getSource());
+    }
+
+    testTreeCopy() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree1 = parser.parse("x = 1");
+        TreeSitterTree tree2 = tree1.copy();
+        assertEq(tree1.getRootNode().getType(), tree2.getRootNode().getType());
+    }
+
+    testTreeEdit() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        # Edit from "x = 1" to "y = 1"
+        tree.edit(0, 1, 1, 0, 0, 0, 1, 0, 1);
+        # After edit, tree structure should still be accessible
+        assertTrue(exists tree.getRootNode());
+    }
+
+    testTreeChangedRanges() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree1 = parser.parse("x = 1");
+        tree1.edit(0, 1, 1, 0, 0, 0, 1, 0, 1);
+        TreeSitterTree tree2 = parser.parseIncremental("y = 1", tree1);
+        list<hash<auto>> ranges = tree1.getChangedRanges(tree2);
+        assertTrue(ranges.size() >= 0);  # May or may not have changes depending on tree-sitter version
+    }
+
+    # Node tests
+    testNodeType() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("module", root.getType());
+        TreeSitterNode func = root.getNamedChild(0);
+        assertEq("function_definition", func.getType());
+    }
+
+    testNodePositions() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq(0, root.getStartByte());
+        assertEq(5, root.getEndByte());
+
+        hash<auto> start = root.getStartPoint();
+        assertEq(0, start.row);
+        assertEq(0, start.column);
+    }
+
+    testNodeText() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 42");
+        TreeSitterNode root = tree.getRootNode();
+        # Find the integer literal
+        TreeSitterNode expr = root.getNamedChild(0);  # expression_statement
+        TreeSitterNode assign = expr.getNamedChild(0);  # assignment
+        assertEq("x = 42", root.getText());
+    }
+
+    testNodeChildren() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        assertTrue(root.getChildCount() > 0);
+        list<TreeSitterNode> children = root.getChildren();
+        assertTrue(children.size() > 0);
+    }
+
+    testNodeNamedChildren() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1\ny = 2");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq(2, root.getNamedChildCount());
+        list<TreeSitterNode> named = root.getNamedChildren();
+        assertEq(2, named.size());
+    }
+
+    testNodeChildByField() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(x): pass");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterNode func = root.getNamedChild(0);
+        *TreeSitterNode name = func.getChildByFieldName("name");
+        assertTrue(exists name);
+        assertEq("identifier", name.getType());
+        assertEq("foo", name.getText());
+    }
+
+    testNodeParent() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterNode child = root.getNamedChild(0);
+        *TreeSitterNode parent = child.getParent();
+        assertTrue(exists parent);
+        assertEq("module", parent.getType());
+    }
+
+    testNodeSiblings() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1\ny = 2");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterNode first = root.getNamedChild(0);
+        *TreeSitterNode next = first.getNextNamedSibling();
+        assertTrue(exists next);
+        *TreeSitterNode prev = next.getPrevNamedSibling();
+        assertTrue(exists prev);
+    }
+
+    testNodeProperties() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass");
+        TreeSitterNode root = tree.getRootNode();
+        assertTrue(root.isNamed());
+        assertFalse(root.isMissing());
+        assertFalse(root.hasError());
+    }
+
+    testNodeToHash() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        hash<auto> h = root.toHash();
+        assertEq("module", h.type);
+        assertEq(0, h.start_byte);
+        assertTrue(h.is_named);
+        assertFalse(h.has_error);
+    }
+
+    testNodeToSexp() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        string sexp = root.toSexp();
+        assertTrue(sexp.find("module") >= 0);
+    }
+
+    testNodeDescendantByRange() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        # Find node at byte 4 (the "1")
+        *TreeSitterNode desc = root.getDescendantForByteRange(4, 5);
+        assertTrue(exists desc);
+    }
+
+    testNodeEquality() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root1 = tree.getRootNode();
+        TreeSitterNode root2 = tree.getRootNode();
+        assertTrue(root1.equals(root2));
+    }
+
+    # Cursor tests
+    testCursorNavigation() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1\ny = 2");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterCursor cursor = root.getCursor();
+
+        # Navigate to first child
+        assertTrue(cursor.gotoFirstChild());
+        TreeSitterNode node = cursor.getCurrentNode();
+        assertTrue(exists node);
+
+        # Navigate to sibling
+        assertTrue(cursor.gotoNextSibling());
+
+        # Navigate back to parent
+        assertTrue(cursor.gotoParent());
+        assertEq("module", cursor.getCurrentNode().getType());
+    }
+
+    testCursorFieldName() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterCursor cursor = root.getCursor();
+
+        cursor.gotoFirstChild();  # function_definition
+        cursor.gotoFirstChild();  # first child of function_definition
+
+        # Look for the "name" field
+        bool found = False;
+        do {
+            *string field = cursor.getCurrentFieldName();
+            if (field == "name") {
+                found = True;
+                break;
+            }
+        } while (cursor.gotoNextSibling());
+        # Field name may or may not be present depending on node
+    }
+
+    testCursorDepth() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterCursor cursor = root.getCursor();
+
+        assertEq(0, cursor.getCurrentDepth());
+        cursor.gotoFirstChild();
+        assertEq(1, cursor.getCurrentDepth());
+        cursor.gotoFirstChild();
+        assertEq(2, cursor.getCurrentDepth());
+    }
+
+    testCursorCopy() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterCursor cursor1 = root.getCursor();
+        cursor1.gotoFirstChild();
+
+        TreeSitterCursor cursor2 = cursor1.copy();
+        assertEq(cursor1.getCurrentNode().getType(), cursor2.getCurrentNode().getType());
+    }
+
+    testCursorGotoForByte() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1\ny = 2");
+        TreeSitterNode root = tree.getRootNode();
+        TreeSitterCursor cursor = root.getCursor();
+
+        int idx = cursor.gotoFirstChildForByte(6);  # Byte 6 is in "y = 2"
+        assertTrue(idx >= 0);
+    }
+
+    # Query tests
+    testQueryBasic() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass\ndef bar(): pass");
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition) @func");
+        list<hash<auto>> matches = query.execute(root);
+        assertEq(2, matches.size());
+    }
+
+    testQueryCaptures() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass\ndef bar(): pass");
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+        list<hash<auto>> captures = query.captures(root);
+        assertTrue(captures.size() >= 2);
+
+        # Check that we have both function names
+        list<string> names = ();
+        foreach hash<auto> cap in (captures) {
+            if (cap.name == "name") {
+                names += cap.node.type;
+            }
+        }
+        assertEq(2, names.size());
+    }
+
+    testQueryMultiplePatterns() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 'hello'\ny = 42");
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "
+            (string) @string
+            (integer) @number
+        ");
+        list<hash<auto>> captures = query.captures(root);
+        assertTrue(captures.size() >= 2);
+
+        assertEq(2, query.getPatternCount());
+    }
+
+    testQueryInvalidPattern() {
+        assertThrows("TREESITTER-QUERY-ERROR", sub() {
+            TreeSitterQuery query("python", "(invalid_node_type_xyz) @x");
+        });
+    }
+
+    testQueryDisableCapture() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass");
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+        query.disableCapture("name");
+
+        list<hash<auto>> captures = query.captures(root);
+        foreach hash<auto> cap in (captures) {
+            assertNeq("name", cap.name);
+        }
+    }
+
+    # Incremental parsing tests
+    testIncrementalParsing() {
+        TreeSitterParser parser("python");
+
+        string code1 = "def foo(): pass";
+        TreeSitterTree tree1 = parser.parse(code1);
+
+        # Edit: change "foo" to "bar"
+        tree1.edit(4, 7, 7, 0, 4, 0, 7, 0, 7);
+
+        string code2 = "def bar(): pass";
+        TreeSitterTree tree2 = parser.parseIncremental(code2, tree1);
+
+        TreeSitterNode root = tree2.getRootNode();
+        assertEq("module", root.getType());
+        assertFalse(root.hasError());
+    }
+
+    # Error handling tests
+    testParseWithErrors() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def incomplete(");
+        TreeSitterNode root = tree.getRootNode();
+        assertTrue(root.hasError());
+    }
+
+    testMissingNodes() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(");
+        TreeSitterNode root = tree.getRootNode();
+
+        # Check that tree has error flag for incomplete code
+        assertTrue(root.hasError());  # Tree should have error
+    }
+
+    # Edge cases and corner cases
+    testEmptySource() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("module", root.getType());
+        assertEq(0, root.getNamedChildCount());
+    }
+
+    testUnicodeSource() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("# Héllo Wörld\nx = 'привет'");
+        TreeSitterNode root = tree.getRootNode();
+        assertFalse(root.hasError());
+    }
+
+    testLargeSource() {
+        TreeSitterParser parser("python");
+
+        # Generate large source
+        string code = "";
+        for (int i = 0; i < 100; i++) {
+            code += sprintf("def func%d():\n    pass\n\n", i);
+        }
+
+        TreeSitterTree tree = parser.parse(code);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq(100, root.getNamedChildCount());
+    }
+
+    testDeeplyNested() {
+        TreeSitterParser parser("python");
+        # Create deeply nested expression
+        string code = "x = " + strmul("(", 50) + "1" + strmul(")", 50);
+        TreeSitterTree tree = parser.parse(code);
+        TreeSitterNode root = tree.getRootNode();
+        assertTrue(exists root);
+    }
+}

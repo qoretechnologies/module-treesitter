@@ -1,0 +1,186 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_TreeSitterParser.qpp defines the TreeSitterParser class */
+/*
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "treesitter-module.h"
+#include "TreeSitterParser.h"
+#include "TreeSitterTree.h"
+
+//! The TreeSitterParser class wraps a tree-sitter parser for a specific language
+/** The TreeSitterParser class provides source code parsing functionality using the tree-sitter library.
+
+    @par Example:
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def hello(): pass");
+TreeSitterNode root = tree.getRootNode();
+printf("Root type: %s\n", root.getType());
+    @endcode
+
+    @par Thread Safety
+    This class is thread-safe; all methods can be called from any thread.
+
+    @since treesitter 1.0
+*/
+qclass TreeSitterParser [arg=TreeSitterParser* parser; ns=TreeSitter; vparent=Qore::Serializable];
+
+//! Creates a new TreeSitterParser for the given language
+/** @param language the language to parse (e.g., "python", "java", "json", "yaml", "javascript", "sql")
+
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+    @endcode
+*/
+TreeSitterParser::constructor(string language) {
+    ReferenceHolder<TreeSitterParser> holder(new TreeSitterParser(language->c_str(), xsink), xsink);
+    if (*xsink) {
+        return;
+    }
+    if (!holder->isValid()) {
+        return;
+    }
+    self->setPrivate(CID_TREESITTERPARSER, holder.release());
+}
+
+//! Destroys the parser
+/**
+*/
+TreeSitterParser::destructor() {
+    parser->deref(xsink);
+}
+
+//! Returns a copy of the parser
+/**
+*/
+TreeSitterParser::copy() {
+    // Create a new parser for the same language
+    ReferenceHolder<TreeSitterParser> holder(
+        new TreeSitterParser(parser->getLanguageName().c_str(), xsink), xsink);
+    if (*xsink) {
+        return;
+    }
+    self->setPrivate(CID_TREESITTERPARSER, holder.release());
+}
+
+//! Parse source code and return the syntax tree
+/** @param source the source code to parse
+
+    @return a TreeSitterTree object representing the parsed syntax tree
+
+    @throw TREESITTER-PARSE-ERROR if parsing fails
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def foo(): return 42");
+    @endcode
+*/
+TreeSitterTree TreeSitterParser::parse(string source) {
+    TreeSitterTree* tree = parser->parse(source, xsink);
+    if (*xsink || !tree) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERTREE, getProgram(), tree);
+}
+
+//! Parse source code incrementally using a previous tree
+/** @param source the new source code
+    @param old_tree the previous parse tree to reuse for incremental parsing
+
+    @return a new TreeSitterTree object
+
+    @throw TREESITTER-PARSE-ERROR if parsing fails
+
+    This method is more efficient than parse() when making small edits to the source code,
+    as it can reuse parts of the old tree that haven't changed.
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+TreeSitterTree tree1 = parser.parse("def foo(): return 42");
+# Edit the tree to reflect source changes
+tree1.edit(0, 3, 3, 0, 0, 0, 3, 0, 3);
+TreeSitterTree tree2 = parser.parseIncremental("def bar(): return 42", tree1);
+    @endcode
+*/
+TreeSitterTree TreeSitterParser::parseIncremental(string source, TreeSitterTree[TreeSitterTree] old_tree) {
+    ReferenceHolder<TreeSitterTree> holder(old_tree, xsink);
+    TreeSitterTree* tree = parser->parseIncremental(source, old_tree, xsink);
+    if (*xsink || !tree) {
+        return QoreValue();
+    }
+    return new QoreObject(QC_TREESITTERTREE, getProgram(), tree);
+}
+
+//! Get the language name for this parser
+/** @return the language name (e.g., "python", "java")
+*/
+string TreeSitterParser::getLanguage() {
+    return new QoreStringNode(parser->getLanguageName());
+}
+
+//! Set the parse timeout in microseconds
+/** @param timeout_micros the timeout in microseconds (0 = no timeout)
+
+    If parsing takes longer than the timeout, the parser will stop and return
+    a partial tree or raise an error.
+*/
+nothing TreeSitterParser::setTimeout(int timeout_micros) {
+    parser->setTimeout(timeout_micros);
+}
+
+//! Get the current timeout in microseconds
+/** @return the timeout in microseconds (0 = no timeout)
+*/
+int TreeSitterParser::getTimeout() {
+    return parser->getTimeout();
+}
+
+//! Get the list of supported languages
+/** @return a list of language names that can be used to create parsers
+
+    @par Example:
+    @code{.py}
+list<string> langs = TreeSitterParser::getSupportedLanguages();
+# Returns: ("python", "java", "json", "yaml", "javascript", "sql")
+    @endcode
+*/
+static list<string> TreeSitterParser::getSupportedLanguages() {
+    return TreeSitterLanguages::getLanguageList();
+}
+
+//! Check if a language is supported
+/** @param language the language name to check
+
+    @return True if the language is supported, False otherwise
+*/
+static bool TreeSitterParser::isLanguageSupported(string language) {
+    return TreeSitterLanguages::isLanguageSupported(language->c_str());
+}

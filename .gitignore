@@ -1,0 +1,21 @@
+# Build directories
+build/
+cmake-build-*/
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.qmod
+*.dox.h
+
+# Documentation output
+docs/html/
