@@ -27,6 +27,11 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parse YAML", \testParseYAML());
         addTestCase("Parse JavaScript", \testParseJavaScript());
         addTestCase("Parse Kotlin", \testParseKotlin());
+        addTestCase("Parse TypeScript", \testParseTypeScript());
+        addTestCase("Parse TSX", \testParseTsx());
+        addTestCase("Parse Qore", \testParseQore());
+        addTestCase("Parse Qore function", \testParseQoreFunction());
+        addTestCase("Parse Qore namespace", \testParseQoreNamespace());
 
         # Tree tests
         addTestCase("Tree root node", \testTreeRootNode());
@@ -102,13 +107,16 @@ class TreeSitterTest inherits QUnit::Test {
 
     testSupportedLanguages() {
         list<string> langs = TreeSitterParser::getSupportedLanguages();
-        assertTrue(langs.size() >= 6);
+        assertTrue(langs.size() >= 9);
         assertTrue(TreeSitterParser::isLanguageSupported("python"));
         assertTrue(TreeSitterParser::isLanguageSupported("java"));
         assertTrue(TreeSitterParser::isLanguageSupported("json"));
         assertTrue(TreeSitterParser::isLanguageSupported("yaml"));
         assertTrue(TreeSitterParser::isLanguageSupported("javascript"));
         assertTrue(TreeSitterParser::isLanguageSupported("kotlin"));
+        assertTrue(TreeSitterParser::isLanguageSupported("typescript"));
+        assertTrue(TreeSitterParser::isLanguageSupported("tsx"));
+        assertTrue(TreeSitterParser::isLanguageSupported("qore"));
         assertFalse(TreeSitterParser::isLanguageSupported("nonexistent"));
     }
 
@@ -148,6 +156,47 @@ class TreeSitterTest inherits QUnit::Test {
         TreeSitterTree tree = parser.parse("fun main() { println(\"Hello\") }");
         TreeSitterNode root = tree.getRootNode();
         assertEq("source_file", root.getType());
+    }
+
+    testParseTypeScript() {
+        TreeSitterParser parser("typescript");
+        TreeSitterTree tree = parser.parse("function greet(name: string): string { return \"Hello \" + name; }");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("program", root.getType());
+    }
+
+    testParseTsx() {
+        TreeSitterParser parser("tsx");
+        TreeSitterTree tree = parser.parse("const App = (): JSX.Element => <div>Hello</div>;");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("program", root.getType());
+    }
+
+    testParseQore() {
+        TreeSitterParser parser("qore");
+        TreeSitterTree tree = parser.parse("%new-style\n\nclass Test { constructor() {} }");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+    }
+
+    testParseQoreFunction() {
+        TreeSitterParser parser("qore");
+        TreeSitterTree tree = parser.parse("int sub add(int a, int b) { return a + b; }");
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        # Check that it parsed as a function declaration
+        TreeSitterNode funcDecl = root.getChild(0);
+        assertEq("function_declaration", funcDecl.getType());
+    }
+
+    testParseQoreNamespace() {
+        TreeSitterParser parser("qore");
+        string source = "namespace Foo::Bar { class Baz { } }";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        TreeSitterNode ns = root.getChild(0);
+        assertEq("namespace_declaration", ns.getType());
     }
 
     # Tree tests

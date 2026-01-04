@@ -30,6 +30,9 @@ extern "C" {
     const TSLanguage* tree_sitter_yaml();
     const TSLanguage* tree_sitter_javascript();
     const TSLanguage* tree_sitter_kotlin();
+    const TSLanguage* tree_sitter_typescript();
+    const TSLanguage* tree_sitter_tsx();
+    const TSLanguage* tree_sitter_qore();
 }
 
 std::unordered_map<std::string, const TSLanguage*> TreeSitterLanguages::languages;
@@ -48,6 +51,11 @@ void TreeSitterLanguages::initLanguages() {
     languages["js"] = tree_sitter_javascript();  // Alias
     languages["kotlin"] = tree_sitter_kotlin();
     languages["kt"] = tree_sitter_kotlin();  // Alias
+    languages["typescript"] = tree_sitter_typescript();
+    languages["ts"] = tree_sitter_typescript();  // Alias
+    languages["tsx"] = tree_sitter_tsx();
+    languages["qore"] = tree_sitter_qore();
+    languages["q"] = tree_sitter_qore();  // Alias
 
     initialized = true;
 }
@@ -72,6 +80,9 @@ QoreListNode* TreeSitterLanguages::getLanguageList() {
     list->push(new QoreStringNode("yaml"), nullptr);
     list->push(new QoreStringNode("javascript"), nullptr);
     list->push(new QoreStringNode("kotlin"), nullptr);
+    list->push(new QoreStringNode("typescript"), nullptr);
+    list->push(new QoreStringNode("tsx"), nullptr);
+    list->push(new QoreStringNode("qore"), nullptr);
     return list;
 }
 

@@ -14,6 +14,9 @@ This module provides bindings to the [tree-sitter](https://tree-sitter.github.io
 - YAML
 - JavaScript
 - Kotlin
+- TypeScript
+- TSX
+- Qore
 
 ## Features
 
@@ -42,12 +45,18 @@ make install
 ```qore
 %requires treesitter
 
+# Parse Python code
 TreeSitterParser parser("python");
 TreeSitterTree tree = parser.parse("def hello(): pass");
 TreeSitterNode root = tree.getRootNode();
 
 printf("Root type: %s\n", root.getType());
 printf("S-expression: %s\n", root.toSexp());
+
+# Parse Qore code
+TreeSitterParser qoreParser("qore");
+TreeSitterTree qoreTree = qoreParser.parse("class Test { constructor() {} }");
+printf("Qore root: %s\n", qoreTree.getRootNode().getType());
 ```
 
 ## Classes
