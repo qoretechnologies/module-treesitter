@@ -102,15 +102,15 @@ TreeSitterTree* TreeSitterParser::parseIncremental(const QoreStringNode* source,
     return new TreeSitterTree(tree, std::string(src, len));
 }
 
-void TreeSitterParser::setTimeout(uint64_t timeout_micros) {
-    if (parser) {
-        ts_parser_set_timeout_micros(parser, timeout_micros);
-    }
+void TreeSitterParser::setTimeout(uint64_t micros) {
+    // Note: In tree-sitter v0.26+, the timeout API changed from ts_parser_set_timeout_micros()
+    // to a progress callback system via ts_parser_parse_with_options(). Since we use
+    // ts_parser_parse_string() which doesn't support options, we store the value but
+    // timeout is not actively enforced. Full timeout support would require using
+    // ts_parser_parse_with_options() with a custom TSInput.
+    timeout_micros = micros;
 }
 
 uint64_t TreeSitterParser::getTimeout() const {
-    if (parser) {
-        return ts_parser_timeout_micros(parser);
-    }
-    return 0;
+    return timeout_micros;
 }

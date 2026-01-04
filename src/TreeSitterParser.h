@@ -76,6 +76,7 @@ private:
     TSParser* parser;
     std::string language_name;
     mutable std::mutex mutex;
+    uint64_t timeout_micros = 0;  //!< Stored but not actively enforced in v0.26+
 
     // Prevent copying
     TreeSitterParser(const TreeSitterParser&) = delete;

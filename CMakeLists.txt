@@ -48,7 +48,7 @@ include(FetchContent)
 FetchContent_Declare(
     tree-sitter
     GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
-    GIT_TAG v0.24.6
+    GIT_TAG v0.26.3
 )
 FetchContent_GetProperties(tree-sitter)
 if(NOT tree-sitter_POPULATED)
@@ -116,6 +116,16 @@ if(NOT tree-sitter-kotlin_POPULATED)
     FetchContent_Populate(tree-sitter-kotlin)
 endif()
 
+FetchContent_Declare(
+    tree-sitter-typescript
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-typescript.git
+    GIT_TAG v0.23.2
+)
+FetchContent_GetProperties(tree-sitter-typescript)
+if(NOT tree-sitter-typescript_POPULATED)
+    FetchContent_Populate(tree-sitter-typescript)
+endif()
+
 # Build tree-sitter as a static library
 add_library(tree-sitter-lib STATIC
     ${tree-sitter_SOURCE_DIR}/lib/src/lib.c
@@ -137,6 +147,11 @@ add_library(tree-sitter-grammars STATIC
     ${tree-sitter-javascript_SOURCE_DIR}/src/scanner.c
     ${tree-sitter-kotlin_SOURCE_DIR}/src/parser.c
     ${tree-sitter-kotlin_SOURCE_DIR}/src/scanner.c
+    ${tree-sitter-typescript_SOURCE_DIR}/typescript/src/parser.c
+    ${tree-sitter-typescript_SOURCE_DIR}/typescript/src/scanner.c
+    ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/parser.c
+    ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/scanner.c
+    ${CMAKE_SOURCE_DIR}/grammars/tree-sitter-qore/src/parser.c
 )
 target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter_SOURCE_DIR}/lib/include
@@ -146,6 +161,9 @@ target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter-yaml_SOURCE_DIR}/src
     ${tree-sitter-javascript_SOURCE_DIR}/src
     ${tree-sitter-kotlin_SOURCE_DIR}/src
+    ${tree-sitter-typescript_SOURCE_DIR}/typescript/src
+    ${tree-sitter-typescript_SOURCE_DIR}/tsx/src
+    ${CMAKE_SOURCE_DIR}/grammars/tree-sitter-qore/src
 )
 
 set(QPP_SRC
