@@ -1,81 +1,51 @@
 stages:
-  - build
   - test
 
+default:
+  tags:
+    - k8s
+    - amd64
+  before_script:
+    - |
+        curl "https://api.github.com/repos/qoretechnologies/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+        -X POST --oauth2-bearer ${GITHUB_ACCESS_TOKEN} -H "Content-Type: application/json" \
+        -d "{\"state\": \"pending\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+    - set +e
+
 variables:
-  GIT_DEPTH: 1
+  REPO_NAME: module-treesitter
   GIT_SUBMODULE_STRATEGY: recursive
 
-.build_template: &build_template
-  stage: build
-  script:
-    - mkdir -p build
-    - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Debug
-    - make -j$(nproc)
-  artifacts:
-    paths:
-      - build/
-    expire_in: 1 day
-
-.test_template: &test_template
+test-ubuntu:
   stage: test
+  image: $CI_REGISTRY/infrastructure/qore-test-base/qore-test-base:develop
   script:
-    - export QORE_MODULE_DIR=$CI_PROJECT_DIR/build
-    - qore test/treesitter.qtest -v
+    - |
+        if test/docker_test/test-ubuntu.sh; then
+          curl "https://api.github.com/repos/qoretechnologies/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -X POST --oauth2-bearer ${GITHUB_ACCESS_TOKEN} -H "Content-Type: application/json" \
+            -d "{\"state\": \"success\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+          exit 0
+        else
+          curl "https://api.github.com/repos/qoretechnologies/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -X POST --oauth2-bearer ${GITHUB_ACCESS_TOKEN} -H "Content-Type: application/json" \
+            -d "{\"state\": \"failure\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+          exit 1
+        fi
 
-build:ubuntu-22.04:
-  <<: *build_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-22.04
-  tags:
-    - docker
-
-build:ubuntu-24.04:
-  <<: *build_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-24.04
-  tags:
-    - docker
-
-build:rocky-9:
-  <<: *build_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:rocky-9
-  tags:
-    - docker
-
-build:alpine:
-  <<: *build_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:alpine
-  tags:
-    - docker
-
-test:ubuntu-22.04:
-  <<: *test_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-22.04
-  dependencies:
-    - build:ubuntu-22.04
-  tags:
-    - docker
-
-test:ubuntu-24.04:
-  <<: *test_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:ubuntu-24.04
-  dependencies:
-    - build:ubuntu-24.04
-  tags:
-    - docker
-
-test:rocky-9:
-  <<: *test_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:rocky-9
-  dependencies:
-    - build:rocky-9
-  tags:
-    - docker
-
-test:alpine:
-  <<: *test_template
-  image: registry.git.qoretechnologies.com/qoretechnologies/qore-test-base:alpine
-  dependencies:
-    - build:alpine
-  tags:
-    - docker
+test-alpine:
+  stage: test
+  image: $CI_REGISTRY/infrastructure/qore-test-base/qore-test-base:develop-alpine
+  script:
+    - |
+        if test/docker_test/test-alpine.sh; then
+          curl "https://api.github.com/repos/qoretechnologies/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -X POST --oauth2-bearer ${GITHUB_ACCESS_TOKEN} -H "Content-Type: application/json" \
+            -d "{\"state\": \"success\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+          exit 0
+        else
+          curl "https://api.github.com/repos/qoretechnologies/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -X POST --oauth2-bearer ${GITHUB_ACCESS_TOKEN} -H "Content-Type: application/json" \
+            -d "{\"state\": \"failure\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+          exit 1
+        fi
