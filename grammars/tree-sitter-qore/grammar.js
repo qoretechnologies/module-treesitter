@@ -70,6 +70,7 @@ module.exports = grammar({
       $.global_variable_declaration,
       $.hashdecl_declaration,
       $.typedef_declaration,
+      $.enum_declaration,
       $._statement,
     ),
 
@@ -102,6 +103,9 @@ module.exports = grammar({
         'strict-args',
         'no-global-vars',
         'no-child-restrictions',
+        'no-typedef',
+        'no-enum',
+        'no-transient',
         'lockdown',
         'exec-class',
         'enable-all-warnings',
@@ -135,6 +139,7 @@ module.exports = grammar({
       $.global_variable_declaration,
       $.hashdecl_declaration,
       $.typedef_declaration,
+      $.enum_declaration,
     ),
 
     // ==================== Class ====================
@@ -320,6 +325,23 @@ module.exports = grammar({
       field('type', $.type),
       field('name', $.identifier),
       ';',
+    ),
+
+    // ==================== Enum ====================
+    enum_declaration: $ => seq(
+      optional($.modifiers),
+      'enum',
+      field('name', $.identifier),
+      optional(seq(':', field('base_type', $.type))),
+      '{',
+      optional(commaSep1($.enum_member)),
+      optional(','),  // trailing comma allowed
+      '}',
+    ),
+
+    enum_member: $ => seq(
+      field('name', $.identifier),
+      optional(seq('=', field('value', $._expression))),
     ),
 
     // ==================== Statements ====================
@@ -841,7 +863,7 @@ module.exports = grammar({
     ),
 
     complex_type: $ => seq(
-      choice('hash', 'list', 'softlist'),
+      choice('hash', 'list', 'softlist', 'enum'),
       '<',
       $.type,
       '>',

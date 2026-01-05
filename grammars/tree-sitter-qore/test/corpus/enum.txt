@@ -1,0 +1,265 @@
+================================================================================
+simple enum declaration
+================================================================================
+
+enum Status {
+    Active,
+    Inactive,
+    Pending
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)
+    (enum_member
+      name: (identifier))
+    (enum_member
+      name: (identifier))
+    (enum_member
+      name: (identifier))))
+
+================================================================================
+enum with explicit values
+================================================================================
+
+enum Priority {
+    Low = 1,
+    Medium = 2,
+    High = 3
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))))
+
+================================================================================
+enum with trailing comma
+================================================================================
+
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)
+    (enum_member
+      name: (identifier))
+    (enum_member
+      name: (identifier))
+    (enum_member
+      name: (identifier))))
+
+================================================================================
+enum with base type
+================================================================================
+
+enum ErrorCode : int {
+    NotFound = 404,
+    ServerError = 500
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)
+    base_type: (type
+      (simple_type))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))))
+
+================================================================================
+public enum declaration
+================================================================================
+
+public enum Visibility {
+    Public,
+    Private,
+    Protected
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    (modifiers
+      (modifier
+        (access_modifier)))
+    name: (identifier)
+    (enum_member
+      name: (identifier))
+    (enum_member
+      name: (identifier))
+    (enum_member
+      name: (identifier))))
+
+================================================================================
+enum with expression values
+================================================================================
+
+enum Flags {
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Execute = 4,
+    All = 1 + 2 + 4
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (literal
+          (integer))))
+    (enum_member
+      name: (identifier)
+      value: (binary_expression
+        (binary_expression
+          (primary_expression
+            (literal
+              (integer)))
+          (primary_expression
+            (literal
+              (integer))))
+        (primary_expression
+          (literal
+            (integer)))))))
+
+================================================================================
+enum in namespace
+================================================================================
+
+namespace MyApp {
+    enum State {
+        Starting,
+        Running,
+        Stopped
+    }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (namespace_declaration
+    name: (identifier)
+    (enum_declaration
+      name: (identifier)
+      (enum_member
+        name: (identifier))
+      (enum_member
+        name: (identifier))
+      (enum_member
+        name: (identifier)))))
+
+================================================================================
+empty enum
+================================================================================
+
+enum Empty {
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)))
+
+================================================================================
+single member enum
+================================================================================
+
+enum Single {
+    OnlyOne
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)
+    (enum_member
+      name: (identifier))))
+
+================================================================================
+enum with string base type
+================================================================================
+
+enum HttpMethod : string {
+    GET = "GET",
+    POST = "POST",
+    PUT = "PUT"
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (enum_declaration
+    name: (identifier)
+    base_type: (type
+      (simple_type))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (string
+          (double_quoted_string))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (string
+          (double_quoted_string))))
+    (enum_member
+      name: (identifier)
+      value: (primary_expression
+        (string
+          (double_quoted_string))))))

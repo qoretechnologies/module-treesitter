@@ -1,0 +1,50 @@
+================================================================================
+hash complex type
+================================================================================
+
+our hash<string> data;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+list complex type
+================================================================================
+
+our list<int> numbers;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+softlist complex type
+================================================================================
+
+our softlist<string> items;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
