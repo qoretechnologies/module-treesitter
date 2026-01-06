@@ -526,13 +526,32 @@
     }
   },
   {
+    "type": "code_param_types",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "type",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "complex_type",
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "code_param_types",
+          "named": true
+        },
         {
           "type": "type",
           "named": true
@@ -2676,11 +2695,39 @@
       "required": false,
       "types": [
         {
+          "type": "assignment_expression",
+          "named": true
+        },
+        {
+          "type": "binary_expression",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
           "type": "module_name",
           "named": true
         },
         {
           "type": "newline",
+          "named": true
+        },
+        {
+          "type": "postfix_expression",
+          "named": true
+        },
+        {
+          "type": "primary_expression",
+          "named": true
+        },
+        {
+          "type": "ternary_expression",
+          "named": true
+        },
+        {
+          "type": "unary_expression",
           "named": true
         }
       ]
@@ -4255,6 +4302,10 @@
     "named": false
   },
   {
+    "type": "...",
+    "named": false
+  },
+  {
     "type": "/",
     "named": false
   },
@@ -4511,6 +4562,10 @@
     "named": false
   },
   {
+    "type": "elif",
+    "named": false
+  },
+  {
     "type": "else",
     "named": false
   },
@@ -4520,6 +4575,10 @@
   },
   {
     "type": "enable-debug",
+    "named": false
+  },
+  {
+    "type": "endif",
     "named": false
   },
   {
@@ -4544,11 +4603,11 @@
   },
   {
     "type": "float",
-    "named": true
+    "named": false
   },
   {
     "type": "float",
-    "named": false
+    "named": true
   },
   {
     "type": "foldl",
@@ -4576,6 +4635,14 @@
   },
   {
     "type": "if",
+    "named": false
+  },
+  {
+    "type": "ifdef",
+    "named": false
+  },
+  {
+    "type": "ifndef",
     "named": false
   },
   {
@@ -4620,6 +4687,10 @@
   },
   {
     "type": "map",
+    "named": false
+  },
+  {
+    "type": "modern",
     "named": false
   },
   {
@@ -4680,11 +4751,11 @@
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "object",
@@ -4884,6 +4955,10 @@
   },
   {
     "type": "typedef",
+    "named": false
+  },
+  {
+    "type": "union",
     "named": false
   },
   {

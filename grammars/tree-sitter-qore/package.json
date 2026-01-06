@@ -26,6 +26,7 @@
       "file-types": [
         "q",
         "qm",
+        "qr",
         "qtest",
         "qc",
         "ql",

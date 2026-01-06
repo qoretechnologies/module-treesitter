@@ -48,3 +48,366 @@ our softlist<string> items;
           (simple_type))))
     (variable_declarator
       (identifier))))
+
+================================================================================
+union type with two types
+================================================================================
+
+our union<int, string> value;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+union type with three types
+================================================================================
+
+our union<int, string, float> mixed;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (type
+          (simple_type))
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code type with no params
+================================================================================
+
+our code<int()> callback;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code type with one param
+================================================================================
+
+our code<string(int)> formatter;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types
+          (type
+            (simple_type)))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code type with multiple params
+================================================================================
+
+our code<bool(string, int, float)> validator;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types
+          (type
+            (simple_type))
+          (type
+            (simple_type))
+          (type
+            (simple_type)))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code type with varargs only
+================================================================================
+
+our code<int(...)> variadic;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types)))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code type with params and varargs
+================================================================================
+
+our code<string(int, ...)> logger;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types
+          (type
+            (simple_type)))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+union with nullable types
+================================================================================
+
+our union<*int, *string> nullable_value;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (nullable_type
+            (type
+              (simple_type))))
+        (type
+          (nullable_type
+            (type
+              (simple_type))))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+union with nested complex types
+================================================================================
+
+our union<list<int>, hash<string>> nested;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (complex_type
+            (type
+              (simple_type))))
+        (type
+          (complex_type
+            (type
+              (simple_type))))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+union with scoped identifier
+================================================================================
+
+our union<MyNs::MyClass, string> scoped;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type
+            (scoped_identifier
+              (identifier)
+              (identifier))))
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code with complex return type
+================================================================================
+
+our code<hash<string>()> factory;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (complex_type
+            (type
+              (simple_type))))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code with nullable return type
+================================================================================
+
+our code<*string()> maybe_string;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (nullable_type
+            (type
+              (simple_type))))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code with complex param types
+================================================================================
+
+our code<bool(hash<string>, list<int>)> complex_validator;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types
+          (type
+            (complex_type
+              (type
+                (simple_type))))
+          (type
+            (complex_type
+              (type
+                (simple_type)))))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code with nullable param types
+================================================================================
+
+our code<nothing(*int, *string)> nullable_params;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types
+          (type
+            (nullable_type
+              (type
+                (simple_type))))
+          (type
+            (nullable_type
+              (type
+                (simple_type)))))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code with scoped param type
+================================================================================
+
+our code<bool(MyNs::MyClass)> class_checker;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types
+          (type
+            (simple_type
+              (scoped_identifier
+                (identifier)
+                (identifier)))))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+union with single type (edge case)
+================================================================================
+
+our union<int> single;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))))
+    (variable_declarator
+      (identifier))))
+
+================================================================================
+code with many params and varargs
+================================================================================
+
+our code<int(string, int, float, bool, ...)> multi_variadic;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (global_variable_declaration
+    (type
+      (complex_type
+        (type
+          (simple_type))
+        (code_param_types
+          (type
+            (simple_type))
+          (type
+            (simple_type))
+          (type
+            (simple_type))
+          (type
+            (simple_type)))))
+    (variable_declarator
+      (identifier))))

@@ -51,3 +51,312 @@ multiple new directives
     (newline))
   (parse_directive
     (newline)))
+
+================================================================================
+modern directive
+================================================================================
+
+%modern
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline)))
+
+================================================================================
+ifdef directive
+================================================================================
+
+%ifdef DEBUG
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (identifier)
+    (newline)))
+
+================================================================================
+ifndef directive
+================================================================================
+
+%ifndef RELEASE
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (identifier)
+    (newline)))
+
+================================================================================
+if directive with expression
+================================================================================
+
+%if (True)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (primary_expression
+      (literal
+        (boolean)))
+    (newline)))
+
+================================================================================
+elif directive
+================================================================================
+
+%elif (False)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (primary_expression
+      (literal
+        (boolean)))
+    (newline)))
+
+================================================================================
+else directive
+================================================================================
+
+%else
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline)))
+
+================================================================================
+endif directive
+================================================================================
+
+%endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline)))
+
+================================================================================
+full conditional block
+================================================================================
+
+%ifdef DEBUG
+const DEBUG_MODE = True;
+%else
+const DEBUG_MODE = False;
+%endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (identifier)
+    (newline))
+  (constant_declaration
+    (identifier)
+    (primary_expression
+      (literal
+        (boolean))))
+  (parse_directive
+    (newline))
+  (constant_declaration
+    (identifier)
+    (primary_expression
+      (literal
+        (boolean))))
+  (parse_directive
+    (newline)))
+
+================================================================================
+if with comparison expression
+================================================================================
+
+%if (1 > 0)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (binary_expression
+      (primary_expression
+        (literal
+          (integer)))
+      (primary_expression
+        (literal
+          (integer))))
+    (newline)))
+
+================================================================================
+if with logical and expression
+================================================================================
+
+%if (True && False)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (binary_expression
+      (primary_expression
+        (literal
+          (boolean)))
+      (primary_expression
+        (literal
+          (boolean))))
+    (newline)))
+
+================================================================================
+if with logical or expression
+================================================================================
+
+%if (True || False)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (binary_expression
+      (primary_expression
+        (literal
+          (boolean)))
+      (primary_expression
+        (literal
+          (boolean))))
+    (newline)))
+
+================================================================================
+nested conditional blocks
+================================================================================
+
+%ifdef OUTER
+%ifdef INNER
+const VALUE = 1;
+%endif
+%endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (identifier)
+    (newline))
+  (parse_directive
+    (identifier)
+    (newline))
+  (constant_declaration
+    (identifier)
+    (primary_expression
+      (literal
+        (integer))))
+  (parse_directive
+    (newline))
+  (parse_directive
+    (newline)))
+
+================================================================================
+if elif else chain
+================================================================================
+
+%if (1 == 1)
+const X = 1;
+%elif (2 == 2)
+const X = 2;
+%else
+const X = 3;
+%endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (binary_expression
+      (primary_expression
+        (literal
+          (integer)))
+      (primary_expression
+        (literal
+          (integer))))
+    (newline))
+  (constant_declaration
+    (identifier)
+    (primary_expression
+      (literal
+        (integer))))
+  (parse_directive
+    (binary_expression
+      (primary_expression
+        (literal
+          (integer)))
+      (primary_expression
+        (literal
+          (integer))))
+    (newline))
+  (constant_declaration
+    (identifier)
+    (primary_expression
+      (literal
+        (integer))))
+  (parse_directive
+    (newline))
+  (constant_declaration
+    (identifier)
+    (primary_expression
+      (literal
+        (integer))))
+  (parse_directive
+    (newline)))
+
+================================================================================
+ifdef with underscored identifier
+================================================================================
+
+%ifdef MY_LONG_DEFINE_NAME
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (identifier)
+    (newline)))
+
+================================================================================
+ifndef with code inside
+================================================================================
+
+%ifndef PRODUCTION
+sub debug_log(string msg) {
+    print(msg);
+}
+%endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (identifier)
+    (newline))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter
+        (type
+          (simple_type))
+        (identifier)))
+    (block
+      (expression_statement
+        (primary_expression
+          (call_expression
+            (identifier)
+            (argument_list
+              (primary_expression
+                (identifier))))))))
+  (parse_directive
+    (newline)))

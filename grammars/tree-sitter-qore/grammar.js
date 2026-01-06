@@ -108,9 +108,17 @@ module.exports = grammar({
         'no-transient',
         'lockdown',
         'exec-class',
+        'modern',
         'enable-all-warnings',
         'push-parse-options',
         'pop-parse-options',
+        // Conditional parsing directives
+        seq('ifdef', $.identifier),
+        seq('ifndef', $.identifier),
+        seq('if', '(', $._expression, ')'),
+        seq('elif', '(', $._expression, ')'),
+        'else',
+        'endif',
       ),
       optional($.newline),
     ),
@@ -862,11 +870,42 @@ module.exports = grammar({
       $.scoped_identifier,
     ),
 
-    complex_type: $ => seq(
-      choice('hash', 'list', 'softlist', 'enum'),
-      '<',
-      $.type,
-      '>',
+    complex_type: $ => choice(
+      // hash<type>, list<type>, softlist<type>, enum<type>
+      seq(
+        choice('hash', 'list', 'softlist', 'enum'),
+        '<',
+        $.type,
+        '>',
+      ),
+      // union<type1, type2, ...>
+      seq(
+        'union',
+        '<',
+        commaSep1($.type),
+        '>',
+      ),
+      // code<return_type(param_types...)> or code<return_type()>
+      seq(
+        'code',
+        '<',
+        $.type,  // return type
+        '(',
+        optional($.code_param_types),
+        ')',
+        '>',
+      ),
+    ),
+
+    // Parameter types for code<> signature, supporting varargs
+    code_param_types: $ => choice(
+      // Just varargs: code<int(...)>
+      '...',
+      // Types optionally followed by varargs: code<int(string, ...)>
+      seq(
+        commaSep1($.type),
+        optional(seq(',', '...')),
+      ),
     ),
 
     nullable_type: $ => seq('*', $.type),
