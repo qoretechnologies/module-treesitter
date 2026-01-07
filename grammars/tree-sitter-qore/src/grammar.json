@@ -4290,6 +4290,36 @@
           "members": [
             {
               "type": "STRING",
+              "value": "date"
+            },
+            {
+              "type": "STRING",
+              "value": "<"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "absolute"
+                },
+                {
+                  "type": "STRING",
+                  "value": "relative"
+                }
+              ]
+            },
+            {
+              "type": "STRING",
+              "value": ">"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
               "value": "union"
             },
             {

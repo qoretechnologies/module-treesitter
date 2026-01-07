@@ -878,6 +878,13 @@ module.exports = grammar({
         $.type,
         '>',
       ),
+      // date<absolute> or date<relative>
+      seq(
+        'date',
+        '<',
+        choice('absolute', 'relative'),
+        '>',
+      ),
       // union<type1, type2, ...>
       seq(
         'union',
