@@ -145,6 +145,85 @@ endif directive
     (newline)))
 
 ================================================================================
+parse directives in class and blocks
+================================================================================
+
+%modern
+class Foo {
+%disable-warning deprecated
+}
+sub foo() {
+%disable-warning deprecated
+    return 1;
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline))
+  (class_declaration
+    name: (identifier)
+    (parse_directive
+      (identifier)
+      (newline)))
+  (function_declaration
+    name: (identifier)
+    (parameter_list)
+    (block
+      (parse_directive
+        (identifier)
+        (newline))
+      (return_statement
+        (primary_expression
+          (literal
+            (integer)))))))
+
+================================================================================
+parse directives in namespace and hashdecl
+================================================================================
+
+namespace Test {
+%disable-warning deprecated
+  hashdecl Info {
+%disable-warning deprecated
+    int id;
+  }
+%disable-warning deprecated
+  enum Kind {
+    A,
+    B,
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (namespace_declaration
+    name: (identifier)
+    (parse_directive
+      (identifier)
+      (newline))
+    (hashdecl_declaration
+      name: (identifier)
+      (parse_directive
+        (identifier)
+        (newline))
+      (hashdecl_member
+        type: (type
+          (simple_type))
+        name: (identifier)))
+    (parse_directive
+      (identifier)
+      (newline))
+    (enum_declaration
+      name: (identifier)
+      (enum_member
+        name: (identifier))
+      (enum_member
+        name: (identifier)))))
+
+================================================================================
 full conditional block
 ================================================================================
 
@@ -360,3 +439,114 @@ sub debug_log(string msg) {
                 (identifier))))))))
   (parse_directive
     (newline)))
+
+================================================================================
+parse directives in list literals
+================================================================================
+
+%modern
+const RequiredKeys = (
+%ifdef PO_NO_PROCESS_CONTROL
+  "sleep",
+%endif
+  "start_thread",
+);
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline))
+  (constant_declaration
+    name: (identifier)
+    value: (primary_expression
+      (list_literal
+        (parse_directive
+          (identifier)
+          (newline))
+        (primary_expression
+          (string
+            (double_quoted_string)))
+        (parse_directive
+          (newline))
+        (primary_expression
+          (string
+            (double_quoted_string)))))))
+
+================================================================================
+parenthesized hash literals
+================================================================================
+
+%modern
+const runStateStrings = ('detach': DebugDetach, 'run': DebugRun);
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline))
+  (constant_declaration
+    name: (identifier)
+    value: (primary_expression
+      (paren_hash_literal
+        (hash_entry
+          key: (string
+            (single_quoted_string))
+          value: (primary_expression
+            (identifier)))
+        (hash_entry
+          key: (string
+            (single_quoted_string))
+          value: (primary_expression
+            (identifier)))))))
+
+================================================================================
+basic switch statement
+================================================================================
+
+%modern
+sub parse_kind(string type) {
+    switch (type) {
+        case "yaml": return 1;
+        case "json": return 2;
+        default: return 0;
+    }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline))
+  (function_declaration
+    name: (identifier)
+    (parameter_list
+      (parameter
+        type: (type
+          (simple_type))
+        name: (identifier)))
+    (block
+      (switch_statement
+        value: (primary_expression
+          (identifier))
+        (switch_case
+          value: (primary_expression
+            (string
+              (double_quoted_string)))
+          (return_statement
+            (primary_expression
+              (literal
+                (integer)))))
+        (switch_case
+          value: (primary_expression
+            (string
+              (double_quoted_string)))
+          (return_statement
+            (primary_expression
+              (literal
+                (integer)))))
+        (default_case
+          (return_statement
+            (primary_expression
+              (literal
+                (integer)))))))))

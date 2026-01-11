@@ -285,6 +285,10 @@
           "named": true
         },
         {
+          "type": "parse_directive",
+          "named": true
+        },
+        {
           "type": "return_statement",
           "named": true
         },
@@ -486,6 +490,10 @@
         },
         {
           "type": "modifiers",
+          "named": true
+        },
+        {
+          "type": "parse_directive",
           "named": true
         },
         {
@@ -729,6 +737,10 @@
             "named": true
           },
           {
+            "type": "parse_directive",
+            "named": true
+          },
+          {
             "type": "return_statement",
             "named": true
           },
@@ -883,6 +895,10 @@
           "named": true
         },
         {
+          "type": "parse_directive",
+          "named": true
+        },
+        {
           "type": "return_statement",
           "named": true
         },
@@ -978,6 +994,10 @@
           },
           {
             "type": "on_exit_statement",
+            "named": true
+          },
+          {
+            "type": "parse_directive",
             "named": true
           },
           {
@@ -1363,6 +1383,10 @@
             "named": true
           },
           {
+            "type": "parse_directive",
+            "named": true
+          },
+          {
             "type": "return_statement",
             "named": true
           },
@@ -1533,6 +1557,10 @@
             "named": true
           },
           {
+            "type": "parse_directive",
+            "named": true
+          },
+          {
             "type": "return_statement",
             "named": true
           },
@@ -1679,15 +1707,55 @@
     "named": true,
     "fields": {
       "key": {
-        "multiple": false,
+        "multiple": true,
         "required": true,
         "types": [
+          {
+            "type": "(",
+            "named": false
+          },
+          {
+            "type": ")",
+            "named": false
+          },
+          {
+            "type": "assignment_expression",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
           {
             "type": "identifier",
             "named": true
           },
           {
+            "type": "postfix_expression",
+            "named": true
+          },
+          {
+            "type": "primary_expression",
+            "named": true
+          },
+          {
+            "type": "scoped_identifier",
+            "named": true
+          },
+          {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "ternary_expression",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_name",
             "named": true
           }
         ]
@@ -1735,6 +1803,10 @@
         {
           "type": "hash_entry",
           "named": true
+        },
+        {
+          "type": "parse_directive",
+          "named": true
         }
       ]
     }
@@ -1764,6 +1836,10 @@
         },
         {
           "type": "modifiers",
+          "named": true
+        },
+        {
+          "type": "parse_directive",
           "named": true
         },
         {
@@ -1887,6 +1963,10 @@
             "named": true
           },
           {
+            "type": "parse_directive",
+            "named": true
+          },
+          {
             "type": "return_statement",
             "named": true
           },
@@ -1988,6 +2068,10 @@
           },
           {
             "type": "on_exit_statement",
+            "named": true
+          },
+          {
+            "type": "parse_directive",
             "named": true
           },
           {
@@ -2098,6 +2182,10 @@
         },
         {
           "type": "binary_expression",
+          "named": true
+        },
+        {
+          "type": "parse_directive",
           "named": true
         },
         {
@@ -2381,6 +2469,10 @@
         {
           "type": "member_declaration",
           "named": true
+        },
+        {
+          "type": "parse_directive",
+          "named": true
         }
       ]
     }
@@ -2534,6 +2626,10 @@
           "named": true
         },
         {
+          "type": "parse_directive",
+          "named": true
+        },
+        {
           "type": "typedef_declaration",
           "named": true
         }
@@ -2646,6 +2742,25 @@
       "types": [
         {
           "type": "parameter",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "paren_hash_literal",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "hash_entry",
+          "named": true
+        },
+        {
+          "type": "parse_directive",
           "named": true
         }
       ]
@@ -2845,6 +2960,10 @@
         },
         {
           "type": "member_expression",
+          "named": true
+        },
+        {
+          "type": "paren_hash_literal",
           "named": true
         },
         {
@@ -3092,6 +3211,10 @@
       "multiple": false,
       "required": false,
       "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
         {
           "type": "scoped_identifier",
           "named": true
@@ -3376,6 +3499,10 @@
             "named": true
           },
           {
+            "type": "parse_directive",
+            "named": true
+          },
+          {
             "type": "return_statement",
             "named": true
           },
@@ -3578,6 +3705,10 @@
         },
         {
           "type": "on_exit_statement",
+          "named": true
+        },
+        {
+          "type": "parse_directive",
           "named": true
         },
         {
@@ -4144,6 +4275,10 @@
             "named": true
           },
           {
+            "type": "parse_directive",
+            "named": true
+          },
+          {
             "type": "return_statement",
             "named": true
           },
@@ -4531,11 +4666,11 @@
   },
   {
     "type": "date",
-    "named": false
+    "named": true
   },
   {
     "type": "date",
-    "named": true
+    "named": false
   },
   {
     "type": "default",
@@ -4554,7 +4689,15 @@
     "named": false
   },
   {
+    "type": "disable-all-warnings",
+    "named": false
+  },
+  {
     "type": "disable-debug",
+    "named": false
+  },
+  {
+    "type": "disable-warning",
     "named": false
   },
   {
@@ -4579,6 +4722,10 @@
   },
   {
     "type": "enable-debug",
+    "named": false
+  },
+  {
+    "type": "enable-warning",
     "named": false
   },
   {
@@ -4607,11 +4754,11 @@
   },
   {
     "type": "float",
-    "named": true
+    "named": false
   },
   {
     "type": "float",
-    "named": false
+    "named": true
   },
   {
     "type": "foldl",

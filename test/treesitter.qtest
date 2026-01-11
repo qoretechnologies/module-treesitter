@@ -32,6 +32,8 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parse Qore", \testParseQore());
         addTestCase("Parse Qore function", \testParseQoreFunction());
         addTestCase("Parse Qore namespace", \testParseQoreNamespace());
+        addTestCase("Parse Qore hash literals", \testParseQoreHashLiterals());
+        addTestCase("Parse Qore typed hash literals", \testParseQoreTypedHashLiterals());
 
         # Tree tests
         addTestCase("Tree root node", \testTreeRootNode());
@@ -197,6 +199,24 @@ class TreeSitterTest inherits QUnit::Test {
         assertEq("source_file", root.getType());
         TreeSitterNode ns = root.getChild(0);
         assertEq("namespace_declaration", ns.getType());
+    }
+
+    testParseQoreHashLiterals() {
+        TreeSitterParser parser("qore");
+        string source = "%new-style\nsub make_hash() { return {\"type\": \"value\", id: 1,}; }";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError());
+    }
+
+    testParseQoreTypedHashLiterals() {
+        TreeSitterParser parser("qore");
+        string source = "%new-style\nsub make_typed_hash() { return <TokenInfo>{\"type\": TOK_EOF, \"value\": \"\"}; }";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError());
     }
 
     # Tree tests

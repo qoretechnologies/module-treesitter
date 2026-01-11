@@ -49,12 +49,16 @@ module.exports = grammar({
 
   conflicts: $ => [
     [$.hash_literal, $.block],
+    [$.hash_literal, $._statement],
     [$.variable_declarator, $.primary_expression],
     [$.module_name, $.scoped_identifier],
     [$.parenthesized_expression, $.list_literal],
+    [$.list_literal, $.paren_hash_literal],
     [$.function_declaration, $.closure_expression],
+    [$.function_declaration, $.simple_type],
     [$.argument_list, $.parameter_list],
     [$.parameter, $.primary_expression],
+    [$._statement, $._top_level_item],
   ],
 
   rules: {
@@ -96,6 +100,11 @@ module.exports = grammar({
         // Debugging
         'enable-debug',
         'disable-debug',
+        // Warning controls
+        seq('disable-warning', $.identifier),
+        seq('enable-warning', $.identifier),
+        'enable-all-warnings',
+        'disable-all-warnings',
         // Module directives
         seq('requires', $.module_name),
         seq('try-module', $.module_name),
@@ -109,7 +118,6 @@ module.exports = grammar({
         'lockdown',
         'exec-class',
         'modern',
-        'enable-all-warnings',
         'push-parse-options',
         'pop-parse-options',
         // Conditional parsing directives
@@ -140,6 +148,7 @@ module.exports = grammar({
     ),
 
     _namespace_item: $ => choice(
+      $.parse_directive,
       $.namespace_declaration,
       $.class_declaration,
       $.function_declaration,
@@ -172,6 +181,7 @@ module.exports = grammar({
     ),
 
     _class_item: $ => choice(
+      $.parse_directive,
       $.member_declaration,
       $.method_declaration,
       $.constructor_declaration,
@@ -184,7 +194,7 @@ module.exports = grammar({
     member_group: $ => seq(
       $.access_modifier,
       '{',
-      repeat($.member_declaration),
+      repeat(choice($.member_declaration, $.parse_directive)),
       '}',
     ),
 
@@ -315,7 +325,7 @@ module.exports = grammar({
       field('name', $.identifier),
       optional($.superclass_list),
       '{',
-      repeat($.hashdecl_member),
+      repeat(choice($.hashdecl_member, $.parse_directive)),
       '}',
     ),
 
@@ -354,6 +364,7 @@ module.exports = grammar({
 
     // ==================== Statements ====================
     _statement: $ => choice(
+      $.parse_directive,
       $.expression_statement,
       $.block,
       $.if_statement,
@@ -609,6 +620,7 @@ module.exports = grammar({
       $.literal,
       $.string,
       $.list_literal,
+      $.paren_hash_literal,
       $.hash_literal,
       $.closure_expression,
       $.call_expression,
@@ -782,22 +794,59 @@ module.exports = grammar({
     ),
 
     // ==================== Collections ====================
+    // Note: Parse directives are allowed before elements (with trailing comma).
+    // For conditionals after the last element, use a trailing comma:
+    // (%ifdef X foo, %endif) rather than (%ifdef X foo %endif)
     list_literal: $ => seq(
       '(',
-      optional(commaSep1($._expression)),
+      optional(seq(
+        repeat(choice(
+          $.parse_directive,
+          seq($._expression, ','),
+        )),
+        optional($._expression),
+      )),
+      ')',
+    ),
+
+    paren_hash_literal: $ => seq(
+      '(',
+      optional(seq(
+        repeat(choice(
+          $.parse_directive,
+          seq($.hash_entry, ','),
+        )),
+        optional($.hash_entry),
+      )),
       ')',
     ),
 
     hash_literal: $ => seq(
       '{',
-      optional(commaSep($.hash_entry)),
+      optional(seq(
+        repeat(choice(
+          $.parse_directive,
+          seq($.hash_entry, ','),
+        )),
+        optional($.hash_entry),
+      )),
       '}',
     ),
 
     hash_entry: $ => seq(
-      field('key', choice($.string, $.identifier)),
+      field('key', $._hash_key),
       ':',
       field('value', $._expression),
+    ),
+
+    // Hash keys are more restricted than general expressions to avoid
+    // ambiguity with ternary operator (a ? b : c vs hash key : value)
+    _hash_key: $ => choice(
+      $.string,
+      $.identifier,
+      $.variable_name,
+      $.scoped_identifier,
+      seq('(', $._expression, ')'),  // computed key in parentheses
     ),
 
     // ==================== Regex ====================
@@ -867,6 +916,7 @@ module.exports = grammar({
       'softdate',
       'softlist',
       'timeout',
+      $.identifier,
       $.scoped_identifier,
     ),
 
