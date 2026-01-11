@@ -257,6 +257,46 @@ our union<MyNs::MyClass, string> scoped;
       (identifier))))
 
 ================================================================================
+cast expression with scoped hashdecl type
+================================================================================
+
+<Qore::StatInfo>{};
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (expression_statement
+    (primary_expression
+      (cast_expression
+        (type
+          (simple_type
+            (scoped_identifier
+              (identifier)
+              (identifier))))
+        (primary_expression
+          (hash_literal))))))
+
+================================================================================
+cast expression with global scoped hashdecl type
+================================================================================
+
+<::Qore::StatInfo>{};
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (expression_statement
+    (primary_expression
+      (cast_expression
+        (type
+          (simple_type
+            (scoped_identifier
+              (identifier)
+              (identifier))))
+        (primary_expression
+          (hash_literal))))))
+
+================================================================================
 code with complex return type
 ================================================================================
 
