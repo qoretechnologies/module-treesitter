@@ -794,17 +794,21 @@ module.exports = grammar({
     ),
 
     // ==================== Collections ====================
-    // Note: Parse directives are allowed before elements (with trailing comma).
-    // For conditionals after the last element, use a trailing comma:
-    // (%ifdef X foo, %endif) rather than (%ifdef X foo %endif)
+    // Note: Parse directives are allowed before and after elements.
     list_literal: $ => seq(
       '(',
       optional(seq(
-        repeat(choice(
-          $.parse_directive,
-          seq($._expression, ','),
+        repeat($.parse_directive),
+        optional(seq(
+          $._expression,
+          repeat(seq(
+            ',',
+            repeat($.parse_directive),
+            $._expression,
+          )),
+          optional(','),
+          repeat($.parse_directive),
         )),
-        optional($._expression),
       )),
       ')',
     ),
@@ -812,11 +816,17 @@ module.exports = grammar({
     paren_hash_literal: $ => seq(
       '(',
       optional(seq(
-        repeat(choice(
-          $.parse_directive,
-          seq($.hash_entry, ','),
+        repeat($.parse_directive),
+        optional(seq(
+          $.hash_entry,
+          repeat(seq(
+            ',',
+            repeat($.parse_directive),
+            $.hash_entry,
+          )),
+          optional(','),
+          repeat($.parse_directive),
         )),
-        optional($.hash_entry),
       )),
       ')',
     ),
@@ -824,11 +834,17 @@ module.exports = grammar({
     hash_literal: $ => seq(
       '{',
       optional(seq(
-        repeat(choice(
-          $.parse_directive,
-          seq($.hash_entry, ','),
+        repeat($.parse_directive),
+        optional(seq(
+          $.hash_entry,
+          repeat(seq(
+            ',',
+            repeat($.parse_directive),
+            $.hash_entry,
+          )),
+          optional(','),
+          repeat($.parse_directive),
         )),
-        optional($.hash_entry),
       )),
       '}',
     ),

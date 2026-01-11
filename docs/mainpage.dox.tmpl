@@ -14,6 +14,10 @@
     - IDE-like features (code folding, outline views)
     - Static analysis tools
     - Code transformation tools
+    - Language servers that rely on accurate Qore syntax trees
+
+    The bundled Qore grammar is intended to mirror the Qore parser so that language tooling can depend on
+    a faithful representation of Qore syntax.
 
     To use this module, use \c "%requires treesitter" in your code.
 

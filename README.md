@@ -24,6 +24,7 @@ This module provides bindings to the [tree-sitter](https://tree-sitter.github.io
 - **Tree cursors**: Memory-efficient tree traversal
 - **Query API**: Pattern matching for syntax highlighting and code analysis
 - **Thread-safe**: All classes are thread-safe
+- **Grammar parity**: The bundled Qore grammar is intended to mirror the Qore parser to support language servers
 
 ## Building
 

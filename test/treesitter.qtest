@@ -34,6 +34,8 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parse Qore namespace", \testParseQoreNamespace());
         addTestCase("Parse Qore hash literals", \testParseQoreHashLiterals());
         addTestCase("Parse Qore typed hash literals", \testParseQoreTypedHashLiterals());
+        addTestCase("Parse Qore parse directives in collections", \testParseQoreParseDirectivesInCollections());
+        addTestCase("Parse Qore parse directives in collections invalid", \testParseQoreParseDirectivesInCollectionsInvalid());
 
         # Tree tests
         addTestCase("Tree root node", \testTreeRootNode());
@@ -217,6 +219,44 @@ class TreeSitterTest inherits QUnit::Test {
         TreeSitterNode root = tree.getRootNode();
         assertEq("source_file", root.getType());
         assertFalse(root.hasError());
+    }
+
+    testParseQoreParseDirectivesInCollections() {
+        TreeSitterParser parser("qore");
+        string source = "%new-style\n"
+            "sub make_list() { return (1,\n"
+            "%ifdef X\n"
+            "2\n"
+            "%endif\n"
+            "); }\n"
+            "sub make_paren_hash() { return (a: 1,\n"
+            "%ifdef X\n"
+            "b: 2\n"
+            "%endif\n"
+            "); }\n"
+            "sub make_hash() { return {a: 1,\n"
+            "%ifdef X\n"
+            "b: 2\n"
+            "%endif\n"
+            "}; }\n";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError());
+    }
+
+    testParseQoreParseDirectivesInCollectionsInvalid() {
+        TreeSitterParser parser("qore");
+        string source = "%new-style\n"
+            "sub bad_list() { return (1\n"
+            "%ifdef X\n"
+            "2\n"
+            "%endif\n"
+            "); }\n";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertTrue(root.hasError());
     }
 
     # Tree tests
