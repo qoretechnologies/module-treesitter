@@ -7,9 +7,7 @@ ifdef without identifier:error
 --------------------------------------------------------------------------------
 
 (source_file
-  (parse_directive
-    (identifier
-      (MISSING "identifier_token1"))))
+  (ERROR))
 
 ================================================================================
 ifndef without identifier:error
@@ -20,9 +18,7 @@ ifndef without identifier:error
 --------------------------------------------------------------------------------
 
 (source_file
-  (parse_directive
-    (identifier
-      (MISSING "identifier_token1"))))
+  (ERROR))
 
 ================================================================================
 if without expression:error

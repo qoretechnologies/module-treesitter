@@ -4369,6 +4369,150 @@
     "named": false
   },
   {
+    "type": "%allow-bare-refs",
+    "named": false
+  },
+  {
+    "type": "%assume-global",
+    "named": false
+  },
+  {
+    "type": "%assume-local",
+    "named": false
+  },
+  {
+    "type": "%disable-all-warnings",
+    "named": false
+  },
+  {
+    "type": "%disable-debug",
+    "named": false
+  },
+  {
+    "type": "%disable-warning",
+    "named": false
+  },
+  {
+    "type": "%elif",
+    "named": false
+  },
+  {
+    "type": "%else",
+    "named": false
+  },
+  {
+    "type": "%enable-all-warnings",
+    "named": false
+  },
+  {
+    "type": "%enable-debug",
+    "named": false
+  },
+  {
+    "type": "%enable-warning",
+    "named": false
+  },
+  {
+    "type": "%endif",
+    "named": false
+  },
+  {
+    "type": "%exec-class",
+    "named": false
+  },
+  {
+    "type": "%if",
+    "named": false
+  },
+  {
+    "type": "%ifdef",
+    "named": false
+  },
+  {
+    "type": "%ifndef",
+    "named": false
+  },
+  {
+    "type": "%lockdown",
+    "named": false
+  },
+  {
+    "type": "%modern",
+    "named": false
+  },
+  {
+    "type": "%new-style",
+    "named": false
+  },
+  {
+    "type": "%no-child-restrictions",
+    "named": false
+  },
+  {
+    "type": "%no-enum",
+    "named": false
+  },
+  {
+    "type": "%no-global-vars",
+    "named": false
+  },
+  {
+    "type": "%no-transient",
+    "named": false
+  },
+  {
+    "type": "%no-typedef",
+    "named": false
+  },
+  {
+    "type": "%old-style",
+    "named": false
+  },
+  {
+    "type": "%perl-bool-eval",
+    "named": false
+  },
+  {
+    "type": "%pop-parse-options",
+    "named": false
+  },
+  {
+    "type": "%push-parse-options",
+    "named": false
+  },
+  {
+    "type": "%require-our",
+    "named": false
+  },
+  {
+    "type": "%require-prototypes",
+    "named": false
+  },
+  {
+    "type": "%require-types",
+    "named": false
+  },
+  {
+    "type": "%requires",
+    "named": false
+  },
+  {
+    "type": "%strict-args",
+    "named": false
+  },
+  {
+    "type": "%strict-bool-eval",
+    "named": false
+  },
+  {
+    "type": "%strict-types",
+    "named": false
+  },
+  {
+    "type": "%try-module",
+    "named": false
+  },
+  {
     "type": "&",
     "named": false
   },
@@ -4569,23 +4713,11 @@
     "named": false
   },
   {
-    "type": "allow-bare-refs",
-    "named": false
-  },
-  {
     "type": "and",
     "named": false
   },
   {
     "type": "any",
-    "named": false
-  },
-  {
-    "type": "assume-global",
-    "named": false
-  },
-  {
-    "type": "assume-local",
     "named": false
   },
   {
@@ -4666,11 +4798,11 @@
   },
   {
     "type": "date",
-    "named": true
+    "named": false
   },
   {
     "type": "date",
-    "named": false
+    "named": true
   },
   {
     "type": "default",
@@ -4689,18 +4821,6 @@
     "named": false
   },
   {
-    "type": "disable-all-warnings",
-    "named": false
-  },
-  {
-    "type": "disable-debug",
-    "named": false
-  },
-  {
-    "type": "disable-warning",
-    "named": false
-  },
-  {
     "type": "do",
     "named": false
   },
@@ -4709,27 +4829,7 @@
     "named": false
   },
   {
-    "type": "elif",
-    "named": false
-  },
-  {
     "type": "else",
-    "named": false
-  },
-  {
-    "type": "enable-all-warnings",
-    "named": false
-  },
-  {
-    "type": "enable-debug",
-    "named": false
-  },
-  {
-    "type": "enable-warning",
-    "named": false
-  },
-  {
-    "type": "endif",
     "named": false
   },
   {
@@ -4741,10 +4841,6 @@
     "named": true
   },
   {
-    "type": "exec-class",
-    "named": false
-  },
-  {
     "type": "exists",
     "named": false
   },
@@ -4754,11 +4850,11 @@
   },
   {
     "type": "float",
-    "named": false
+    "named": true
   },
   {
     "type": "float",
-    "named": true
+    "named": false
   },
   {
     "type": "foldl",
@@ -4786,14 +4882,6 @@
   },
   {
     "type": "if",
-    "named": false
-  },
-  {
-    "type": "ifdef",
-    "named": false
-  },
-  {
-    "type": "ifndef",
     "named": false
   },
   {
@@ -4833,15 +4921,7 @@
     "named": false
   },
   {
-    "type": "lockdown",
-    "named": false
-  },
-  {
     "type": "map",
-    "named": false
-  },
-  {
-    "type": "modern",
     "named": false
   },
   {
@@ -4857,32 +4937,8 @@
     "named": false
   },
   {
-    "type": "new-style",
-    "named": false
-  },
-  {
     "type": "newline",
     "named": true
-  },
-  {
-    "type": "no-child-restrictions",
-    "named": false
-  },
-  {
-    "type": "no-enum",
-    "named": false
-  },
-  {
-    "type": "no-global-vars",
-    "named": false
-  },
-  {
-    "type": "no-transient",
-    "named": false
-  },
-  {
-    "type": "no-typedef",
-    "named": false
   },
   {
     "type": "not",
@@ -4890,11 +4946,11 @@
   },
   {
     "type": "nothing",
-    "named": true
+    "named": false
   },
   {
     "type": "nothing",
-    "named": false
+    "named": true
   },
   {
     "type": "null",
@@ -4913,10 +4969,6 @@
     "named": false
   },
   {
-    "type": "old-style",
-    "named": false
-  },
-  {
     "type": "on_exit",
     "named": false
   },
@@ -4929,15 +4981,7 @@
     "named": false
   },
   {
-    "type": "perl-bool-eval",
-    "named": false
-  },
-  {
     "type": "pop",
-    "named": false
-  },
-  {
-    "type": "pop-parse-options",
     "named": false
   },
   {
@@ -4957,10 +5001,6 @@
     "named": false
   },
   {
-    "type": "push-parse-options",
-    "named": false
-  },
-  {
     "type": "reference",
     "named": false
   },
@@ -4974,22 +5014,6 @@
   },
   {
     "type": "remove",
-    "named": false
-  },
-  {
-    "type": "require-our",
-    "named": false
-  },
-  {
-    "type": "require-prototypes",
-    "named": false
-  },
-  {
-    "type": "require-types",
-    "named": false
-  },
-  {
-    "type": "requires",
     "named": false
   },
   {
@@ -5049,18 +5073,6 @@
     "named": false
   },
   {
-    "type": "strict-args",
-    "named": false
-  },
-  {
-    "type": "strict-bool-eval",
-    "named": false
-  },
-  {
-    "type": "strict-types",
-    "named": false
-  },
-  {
     "type": "string",
     "named": false
   },
@@ -5102,10 +5114,6 @@
   },
   {
     "type": "try",
-    "named": false
-  },
-  {
-    "type": "try-module",
     "named": false
   },
   {

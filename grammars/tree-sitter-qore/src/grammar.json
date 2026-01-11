@@ -58,70 +58,66 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "STRING",
-          "value": "%"
-        },
-        {
           "type": "CHOICE",
           "members": [
             {
               "type": "STRING",
-              "value": "new-style"
+              "value": "%new-style"
             },
             {
               "type": "STRING",
-              "value": "old-style"
+              "value": "%old-style"
             },
             {
               "type": "STRING",
-              "value": "require-types"
+              "value": "%require-types"
             },
             {
               "type": "STRING",
-              "value": "strict-types"
+              "value": "%strict-types"
             },
             {
               "type": "STRING",
-              "value": "require-prototypes"
+              "value": "%require-prototypes"
             },
             {
               "type": "STRING",
-              "value": "require-our"
+              "value": "%require-our"
             },
             {
               "type": "STRING",
-              "value": "assume-local"
+              "value": "%assume-local"
             },
             {
               "type": "STRING",
-              "value": "assume-global"
+              "value": "%assume-global"
             },
             {
               "type": "STRING",
-              "value": "allow-bare-refs"
+              "value": "%allow-bare-refs"
             },
             {
               "type": "STRING",
-              "value": "perl-bool-eval"
+              "value": "%perl-bool-eval"
             },
             {
               "type": "STRING",
-              "value": "strict-bool-eval"
+              "value": "%strict-bool-eval"
             },
             {
               "type": "STRING",
-              "value": "enable-debug"
+              "value": "%enable-debug"
             },
             {
               "type": "STRING",
-              "value": "disable-debug"
+              "value": "%disable-debug"
             },
             {
               "type": "SEQ",
               "members": [
                 {
                   "type": "STRING",
-                  "value": "disable-warning"
+                  "value": "%disable-warning"
                 },
                 {
                   "type": "SYMBOL",
@@ -134,7 +130,7 @@
               "members": [
                 {
                   "type": "STRING",
-                  "value": "enable-warning"
+                  "value": "%enable-warning"
                 },
                 {
                   "type": "SYMBOL",
@@ -144,18 +140,18 @@
             },
             {
               "type": "STRING",
-              "value": "enable-all-warnings"
+              "value": "%enable-all-warnings"
             },
             {
               "type": "STRING",
-              "value": "disable-all-warnings"
+              "value": "%disable-all-warnings"
             },
             {
               "type": "SEQ",
               "members": [
                 {
                   "type": "STRING",
-                  "value": "requires"
+                  "value": "%requires"
                 },
                 {
                   "type": "SYMBOL",
@@ -168,7 +164,7 @@
               "members": [
                 {
                   "type": "STRING",
-                  "value": "try-module"
+                  "value": "%try-module"
                 },
                 {
                   "type": "SYMBOL",
@@ -178,54 +174,54 @@
             },
             {
               "type": "STRING",
-              "value": "strict-args"
+              "value": "%strict-args"
             },
             {
               "type": "STRING",
-              "value": "no-global-vars"
+              "value": "%no-global-vars"
             },
             {
               "type": "STRING",
-              "value": "no-child-restrictions"
+              "value": "%no-child-restrictions"
             },
             {
               "type": "STRING",
-              "value": "no-typedef"
+              "value": "%no-typedef"
             },
             {
               "type": "STRING",
-              "value": "no-enum"
+              "value": "%no-enum"
             },
             {
               "type": "STRING",
-              "value": "no-transient"
+              "value": "%no-transient"
             },
             {
               "type": "STRING",
-              "value": "lockdown"
+              "value": "%lockdown"
             },
             {
               "type": "STRING",
-              "value": "exec-class"
+              "value": "%exec-class"
             },
             {
               "type": "STRING",
-              "value": "modern"
+              "value": "%modern"
             },
             {
               "type": "STRING",
-              "value": "push-parse-options"
+              "value": "%push-parse-options"
             },
             {
               "type": "STRING",
-              "value": "pop-parse-options"
+              "value": "%pop-parse-options"
             },
             {
               "type": "SEQ",
               "members": [
                 {
                   "type": "STRING",
-                  "value": "ifdef"
+                  "value": "%ifdef"
                 },
                 {
                   "type": "SYMBOL",
@@ -238,7 +234,7 @@
               "members": [
                 {
                   "type": "STRING",
-                  "value": "ifndef"
+                  "value": "%ifndef"
                 },
                 {
                   "type": "SYMBOL",
@@ -251,7 +247,7 @@
               "members": [
                 {
                   "type": "STRING",
-                  "value": "if"
+                  "value": "%if"
                 },
                 {
                   "type": "STRING",
@@ -272,7 +268,7 @@
               "members": [
                 {
                   "type": "STRING",
-                  "value": "elif"
+                  "value": "%elif"
                 },
                 {
                   "type": "STRING",
@@ -290,11 +286,11 @@
             },
             {
               "type": "STRING",
-              "value": "else"
+              "value": "%else"
             },
             {
               "type": "STRING",
-              "value": "endif"
+              "value": "%endif"
             }
           ]
         },

@@ -474,6 +474,39 @@ const RequiredKeys = (
             (double_quoted_string)))))))
 
 ================================================================================
+parse directives after last list element
+================================================================================
+
+%modern
+const Keys = (
+  "a",
+%ifdef X
+  "b"
+%endif
+);
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline))
+  (constant_declaration
+    name: (identifier)
+    value: (primary_expression
+      (list_literal
+        (primary_expression
+          (string
+            (double_quoted_string)))
+        (parse_directive
+          (identifier)
+          (newline))
+        (primary_expression
+          (string
+            (double_quoted_string)))
+        (parse_directive
+          (newline))))))
+
+================================================================================
 parenthesized hash literals
 ================================================================================
 
@@ -499,6 +532,68 @@ const runStateStrings = ('detach': DebugDetach, 'run': DebugRun);
             (single_quoted_string))
           value: (primary_expression
             (identifier)))))))
+
+================================================================================
+parse directives after last hash element
+================================================================================
+
+%modern
+const ParenMap = (
+  a: 1,
+%ifdef X
+  b: 2
+%endif
+);
+const HashMap = {
+  a: 1,
+%ifdef X
+  b: 2
+%endif
+};
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (parse_directive
+    (newline))
+  (constant_declaration
+    name: (identifier)
+    value: (primary_expression
+      (paren_hash_literal
+        (hash_entry
+          key: (identifier)
+          value: (primary_expression
+            (literal
+              (integer))))
+        (parse_directive
+          (identifier)
+          (newline))
+        (hash_entry
+          key: (identifier)
+          value: (primary_expression
+            (literal
+              (integer))))
+        (parse_directive
+          (newline)))))
+  (constant_declaration
+    name: (identifier)
+    value: (primary_expression
+      (hash_literal
+        (hash_entry
+          key: (identifier)
+          value: (primary_expression
+            (literal
+              (integer))))
+        (parse_directive
+          (identifier)
+          (newline))
+        (hash_entry
+          key: (identifier)
+          value: (primary_expression
+            (literal
+              (integer))))
+        (parse_directive
+          (newline))))))
 
 ================================================================================
 basic switch statement
