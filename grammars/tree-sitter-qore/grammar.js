@@ -59,6 +59,7 @@ module.exports = grammar({
     [$.argument_list, $.parameter_list],
     [$.parameter, $.primary_expression],
     [$._statement, $._top_level_item],
+    [$.module_spec],
   ],
 
   rules: {
@@ -67,6 +68,7 @@ module.exports = grammar({
 
     _top_level_item: $ => choice(
       $.parse_directive,
+      $.module_declaration,
       $.namespace_declaration,
       $.class_declaration,
       $.function_declaration,
@@ -76,6 +78,23 @@ module.exports = grammar({
       $.typedef_declaration,
       $.enum_declaration,
       $._statement,
+    ),
+
+    // Module declaration block
+    // e.g., module Swagger { version = "1.0"; author = "..."; }
+    module_declaration: $ => seq(
+      'module',
+      field('name', $.identifier),
+      '{',
+      repeat($.module_attribute),
+      '}',
+    ),
+
+    module_attribute: $ => seq(
+      field('name', $.identifier),
+      '=',
+      field('value', $._expression),
+      ';',
     ),
 
     // ==================== Parse Directives ====================
@@ -105,10 +124,15 @@ module.exports = grammar({
         '%enable-all-warnings',
         '%disable-all-warnings',
         // Module directives
-        seq('%requires', $.module_name),
-        seq('%try-module', $.module_name),
+        seq('%requires', $.module_spec),
+        seq('%requires', '(', 'reexport', ')', $.module_spec),
+        seq('%try-module', $.module_spec),
+        '%endtry',
+        // Define directive for conditional compilation
+        seq('%define', $.identifier),
         // Other common directives
         '%strict-args',
+        '%allow-weak-references',
         '%no-global-vars',
         '%no-child-restrictions',
         '%no-typedef',
@@ -134,6 +158,22 @@ module.exports = grammar({
       $.identifier,
       $.scoped_identifier,
     ),
+
+    // Module specification with optional version constraint
+    // e.g., "qore >= 1.0.3", "json", "xml <= 2.0"
+    module_spec: $ => seq(
+      $.module_name,
+      optional($.version_constraint),
+    ),
+
+    version_constraint: $ => seq(
+      field('operator', $.comparison_operator),
+      field('version', $.version_number),
+    ),
+
+    comparison_operator: $ => choice('>=', '<=', '>', '<', '=='),
+
+    version_number: $ => token(/[0-9]+(\.[0-9]+)*/),
 
     // ==================== Namespace ====================
     namespace_declaration: $ => seq(

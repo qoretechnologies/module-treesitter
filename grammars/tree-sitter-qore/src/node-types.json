@@ -549,6 +549,11 @@
     }
   },
   {
+    "type": "comparison_operator",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "complex_type",
     "named": true,
     "fields": {},
@@ -2552,6 +2557,78 @@
     }
   },
   {
+    "type": "module_attribute",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "assignment_expression",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "postfix_expression",
+            "named": true
+          },
+          {
+            "type": "primary_expression",
+            "named": true
+          },
+          {
+            "type": "ternary_expression",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "module_declaration",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "module_attribute",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "module_name",
     "named": true,
     "fields": {},
@@ -2565,6 +2642,25 @@
         },
         {
           "type": "scoped_identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "module_spec",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "module_name",
+          "named": true
+        },
+        {
+          "type": "version_constraint",
           "named": true
         }
       ]
@@ -2822,7 +2918,7 @@
           "named": true
         },
         {
-          "type": "module_name",
+          "type": "module_spec",
           "named": true
         },
         {
@@ -3343,6 +3439,10 @@
         },
         {
           "type": "local_variable_declaration",
+          "named": true
+        },
+        {
+          "type": "module_declaration",
           "named": true
         },
         {
@@ -4188,6 +4288,32 @@
     "fields": {}
   },
   {
+    "type": "version_constraint",
+    "named": true,
+    "fields": {
+      "operator": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "comparison_operator",
+            "named": true
+          }
+        ]
+      },
+      "version": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "version_number",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "where_clause",
     "named": true,
     "fields": {},
@@ -4373,11 +4499,19 @@
     "named": false
   },
   {
+    "type": "%allow-weak-references",
+    "named": false
+  },
+  {
     "type": "%assume-global",
     "named": false
   },
   {
     "type": "%assume-local",
+    "named": false
+  },
+  {
+    "type": "%define",
     "named": false
   },
   {
@@ -4414,6 +4548,10 @@
   },
   {
     "type": "%endif",
+    "named": false
+  },
+  {
+    "type": "%endtry",
     "named": false
   },
   {
@@ -4730,11 +4868,11 @@
   },
   {
     "type": "binary",
-    "named": true
+    "named": false
   },
   {
     "type": "binary",
-    "named": false
+    "named": true
   },
   {
     "type": "bool",
@@ -4798,11 +4936,11 @@
   },
   {
     "type": "date",
-    "named": false
+    "named": true
   },
   {
     "type": "date",
-    "named": true
+    "named": false
   },
   {
     "type": "default",
@@ -4850,11 +4988,11 @@
   },
   {
     "type": "float",
-    "named": true
+    "named": false
   },
   {
     "type": "float",
-    "named": false
+    "named": true
   },
   {
     "type": "foldl",
@@ -4925,6 +5063,10 @@
     "named": false
   },
   {
+    "type": "module",
+    "named": false
+  },
+  {
     "type": "my",
     "named": false
   },
@@ -4958,11 +5100,11 @@
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "object",
@@ -4998,6 +5140,10 @@
   },
   {
     "type": "public",
+    "named": false
+  },
+  {
+    "type": "reexport",
     "named": false
   },
   {
@@ -5123,6 +5269,10 @@
   {
     "type": "union",
     "named": false
+  },
+  {
+    "type": "version_number",
+    "named": true
   },
   {
     "type": "where",
