@@ -216,7 +216,7 @@ module.exports = grammar({
 
     superclass: $ => seq(
       optional($.access_modifier),
-      $.scoped_identifier,
+      choice($.scoped_identifier, $.identifier),
     ),
 
     _class_item: $ => choice(
@@ -533,7 +533,8 @@ module.exports = grammar({
 
     throw_statement: $ => seq(
       'throw',
-      $._expression,
+      field('error', $._expression),
+      optional(seq(',', field('description', $._expression))),
       ';',
     ),
 
@@ -696,9 +697,10 @@ module.exports = grammar({
 
     index_expression: $ => prec.left(PREC.MEMBER, seq(
       field('object', $._expression),
-      '[',
-      field('index', $._expression),
-      ']',
+      choice(
+        seq('[', field('index', $._expression), ']'),
+        seq('{', field('key', $._expression), '}'),  // hash key access
+      ),
     )),
 
     cast_expression: $ => seq(
@@ -718,33 +720,37 @@ module.exports = grammar({
     ),
 
     // Higher-order functions
-    map_expression: $ => seq(
+    map_expression: $ => prec.right(seq(
       'map',
       field('expression', $._expression),
       ',',
       field('list', $._expression),
-    ),
+      optional(seq(',', field('filter', $._expression))),
+    )),
 
-    select_expression: $ => seq(
+    select_expression: $ => prec.right(seq(
       'select',
       field('expression', $._expression),
       ',',
       field('list', $._expression),
-    ),
+      optional(seq(',', field('filter', $._expression))),
+    )),
 
-    foldl_expression: $ => seq(
+    foldl_expression: $ => prec.right(seq(
       'foldl',
       field('expression', $._expression),
       ',',
       field('list', $._expression),
-    ),
+      optional(seq(',', field('filter', $._expression))),
+    )),
 
-    foldr_expression: $ => seq(
+    foldr_expression: $ => prec.right(seq(
       'foldr',
       field('expression', $._expression),
       ',',
       field('list', $._expression),
-    ),
+      optional(seq(',', field('filter', $._expression))),
+    )),
 
     implicit_argument: $ => /\$\d+/,
 
@@ -901,6 +907,8 @@ module.exports = grammar({
       $.identifier,
       $.variable_name,
       $.scoped_identifier,
+      $.implicit_argument,  // $1, $2, etc. for map expressions
+      $.member_expression,  // $1.key, obj.field for map expressions
       seq('(', $._expression, ')'),  // computed key in parentheses
     ),
 
@@ -976,9 +984,9 @@ module.exports = grammar({
     ),
 
     complex_type: $ => choice(
-      // hash<type>, list<type>, softlist<type>, enum<type>
+      // hash<type>, list<type>, softlist<type>, enum<type>, reference<type>
       seq(
-        choice('hash', 'list', 'softlist', 'enum'),
+        choice('hash', 'list', 'softlist', 'enum', 'reference'),
         '<',
         $.type,
         '>',
