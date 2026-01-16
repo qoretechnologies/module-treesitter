@@ -51,8 +51,12 @@ DLLEXPORT int qore_module_api_minor = QORE_MODULE_API_MINOR;
 DLLEXPORT qore_module_init_t qore_module_init = treesitter_module_init;
 DLLEXPORT qore_module_ns_init_t qore_module_ns_init = treesitter_module_ns_init;
 DLLEXPORT qore_module_delete_t qore_module_delete = treesitter_module_delete;
+#ifdef _QORE_HAS_QL_MIT
+DLLEXPORT qore_license_t qore_module_license = QL_MIT;
+#else
 DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
-DLLEXPORT char qore_module_license_str[] = "LGPL 2.1";
+#endif
+DLLEXPORT char qore_module_license_str[] = "MIT";
 
 // Module namespace
 QoreNamespace TreeSitterNS("TreeSitter");
@@ -96,7 +100,7 @@ static QoreStringNode* treesitter_module_init() {
 }
 
 static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns) {
-    qns->addNamespace(TreeSitterNS.copy());
+    rns->addNamespace(TreeSitterNS.copy());
 }
 
 static void treesitter_module_delete() {

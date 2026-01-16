@@ -1,5 +1,5 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
-/** @file QC_TreeSitterCursor.qpp defines the TreeSitterCursor class */
+/** @file QC_TreeSitterCursor.cpp defines the TreeSitterCursor class */
 /*
     Qore Programming Language
 

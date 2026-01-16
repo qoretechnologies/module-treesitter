@@ -1,5 +1,5 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
-/** @file QC_TreeSitterQuery.qpp defines the TreeSitterQuery class */
+/** @file QC_TreeSitterQuery.cpp defines the TreeSitterQuery class */
 /*
     Qore Programming Language
 
@@ -41,14 +41,15 @@ foreach hash<auto> match in (matches) {
     @endcode
 
     @par Query Syntax
-    Queries use S-expression patterns with the following features:
-    - \c (node_type) matches a node of that type
-    - \c (node_type field: (child_type)) matches a node with a specific field
-    - \c \@capture_name captures the matched node with a name
-    - \c (node_type (child_type)+) matches one or more children
-    - \c (node_type (child_type)?) matches zero or one child
-    - \c (node_type (child_type)*) matches zero or more children
-    - \c (node_type (#eq? @capture "text")) matches nodes with specific text
+    @code{.txt}
+(node_type) matches a node of that type
+(node_type field: (child_type)) matches a node with a specific field
+@capture_name captures the matched node with a name
+(node_type (child_type)+) matches one or more children
+(node_type (child_type)?) matches zero or one child
+(node_type (child_type)*) matches zero or more children
+(node_type (#eq? @capture "text")) matches nodes with specific text
+    @endcode
 
     @since treesitter 1.0
 */

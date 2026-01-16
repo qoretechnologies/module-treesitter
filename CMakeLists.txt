@@ -217,6 +217,9 @@ if (DEFINED ENV{DOXYGEN_EXECUTABLE})
     set(DOXYGEN_EXECUTABLE $ENV{DOXYGEN_EXECUTABLE})
 endif()
 
+set(DOXYGEN_IMAGE_PATH ${CMAKE_SOURCE_DIR}/docs/images CACHE STRING "Doxygen image path" FORCE)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/images)
+
 set(MODULE_DOX_INPUT ${CMAKE_BINARY_DIR})
 qore_external_binary_module(${module_name} ${PROJECT_VERSION})
 

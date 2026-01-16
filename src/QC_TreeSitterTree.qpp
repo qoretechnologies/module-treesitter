@@ -1,5 +1,5 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
-/** @file QC_TreeSitterTree.qpp defines the TreeSitterTree class */
+/** @file QC_TreeSitterTree.cpp defines the TreeSitterTree class */
 /*
     Qore Programming Language
 

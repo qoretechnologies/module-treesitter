@@ -21,15 +21,18 @@
 
     To use this module, use \c "%requires treesitter" in your code.
 
-    @section treesitter_languages Supported Languages
+    @section treesitter_languages Supported Grammars
 
-    The module includes built-in support for the following languages:
+    The module includes built-in grammars for the following languages:
     - Python
     - Java
     - JSON
     - YAML
     - JavaScript
-    - SQL
+    - Kotlin
+    - TypeScript
+    - TSX
+    - Qore
 
     @section treesitter_classes Classes
 
@@ -268,14 +271,17 @@ if (root.hasError()) {
     @section treesitter_release_notes Release Notes
 
     @subsection treesitter_v1_0 treesitter Module Version 1.0
-    - Initial release with support for Python, Java, JSON, YAML, JavaScript, and SQL
+    - Initial release with support for Python, Java, JSON, YAML, JavaScript (js), Kotlin (kt), TypeScript (ts), TSX,
+      and Qore (q)
     - Full tree-sitter API: parsing, tree traversal, cursors, and queries
     - Incremental parsing support
     - Query pattern matching for syntax highlighting and code analysis
 
     @section treesitterlicense License
 
-    The treesitter module is released under the <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a>.
+    The treesitter module is released under the
+    <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a> or the
+    <a href="https://opensource.org/licenses/MIT">MIT license</a>.
 
     Tree-sitter itself is released under the MIT license.
 */

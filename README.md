@@ -6,7 +6,7 @@ Tree-sitter syntax parsing library bindings for the [Qore Programming Language](
 
 This module provides bindings to the [tree-sitter](https://tree-sitter.github.io/tree-sitter/) parsing library, enabling fast, incremental syntax parsing for multiple programming languages.
 
-## Supported Languages
+## Supported Grammars
 
 - Python
 - Java
@@ -70,7 +70,7 @@ printf("Qore root: %s\n", qoreTree.getRootNode().getType());
 
 ## License
 
-LGPL 2.1 - see [LICENSE](LICENSE) for details.
+LGPL 2.1 or MIT - see [LICENSE](LICENSE) for details.
 
 ## Links
 
