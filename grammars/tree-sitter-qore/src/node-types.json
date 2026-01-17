@@ -3034,14 +3034,6 @@
       "required": false,
       "types": [
         {
-          "type": "assignment_expression",
-          "named": true
-        },
-        {
-          "type": "binary_expression",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -3051,22 +3043,6 @@
         },
         {
           "type": "newline",
-          "named": true
-        },
-        {
-          "type": "postfix_expression",
-          "named": true
-        },
-        {
-          "type": "primary_expression",
-          "named": true
-        },
-        {
-          "type": "ternary_expression",
-          "named": true
-        },
-        {
-          "type": "unary_expression",
           "named": true
         }
       ]
@@ -5140,6 +5116,10 @@
     "named": false
   },
   {
+    "type": "defined",
+    "named": false
+  },
+  {
     "type": "delete",
     "named": false
   },
@@ -5181,11 +5161,11 @@
   },
   {
     "type": "float",
-    "named": false
+    "named": true
   },
   {
     "type": "float",
-    "named": true
+    "named": false
   },
   {
     "type": "foldl",
@@ -5281,11 +5261,11 @@
   },
   {
     "type": "nothing",
-    "named": false
+    "named": true
   },
   {
     "type": "nothing",
-    "named": true
+    "named": false
   },
   {
     "type": "null",
@@ -5293,11 +5273,11 @@
   },
   {
     "type": "number",
-    "named": true
+    "named": false
   },
   {
     "type": "number",
-    "named": false
+    "named": true
   },
   {
     "type": "object",

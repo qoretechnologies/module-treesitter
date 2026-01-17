@@ -36,6 +36,7 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parse Qore typed hash literals", \testParseQoreTypedHashLiterals());
         addTestCase("Parse Qore parse directives in collections", \testParseQoreParseDirectivesInCollections());
         addTestCase("Parse Qore parse directives in collections invalid", \testParseQoreParseDirectivesInCollectionsInvalid());
+        addTestCase("Parse Qore conditional directives with comments", \testParseQoreConditionalDirectivesWithComments());
 
         # Tree tests
         addTestCase("Tree root node", \testTreeRootNode());
@@ -257,6 +258,106 @@ class TreeSitterTest inherits QUnit::Test {
         TreeSitterNode root = tree.getRootNode();
         assertEq("source_file", root.getType());
         assertTrue(root.hasError());
+    }
+
+    # Test conditional directives with trailing comments (line and block)
+    testParseQoreConditionalDirectivesWithComments() {
+        TreeSitterParser parser("qore");
+
+        # Test %ifdef with trailing comment
+        string source = "%new-style\n"
+            "%ifdef Feature # enable this feature\n"
+            "class TestClass {}\n"
+            "%endif # Feature\n";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError(), "ifdef with comment should parse without error");
+
+        # Test %ifndef with trailing comment
+        source = "%new-style\n"
+            "%ifndef Debug # production mode\n"
+            "class ProdClass {}\n"
+            "%endif # Debug\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError(), "ifndef with comment should parse without error");
+
+        # Test %if with trailing comment
+        source = "%new-style\n"
+            "%if defined(Feature) # check feature\n"
+            "class FeatureClass {}\n"
+            "%endif # Feature check\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError(), "%if with comment should parse without error");
+
+        # Test %elif with trailing comment
+        source = "%new-style\n"
+            "%if defined(Option1) # first\n"
+            "class Option1Class {}\n"
+            "%elif defined(Option2) # second\n"
+            "class Option2Class {}\n"
+            "%else # fallback\n"
+            "class DefaultClass {}\n"
+            "%endif # chain end\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError(), "elif with comment should parse without error");
+
+        # Test block comments after directives
+        source = "%new-style\n"
+            "%ifdef Test /* block comment */\n"
+            "class TestClass {}\n"
+            "%endif /* end block */\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError(), "block comment after directive should parse without error");
+
+        # Test combined condition with comment
+        source = "%new-style\n"
+            "%if defined(A) && !defined(B) # combined condition\n"
+            "class CombinedClass {}\n"
+            "%endif # end combined\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertEq("source_file", root.getType());
+        assertFalse(root.hasError(), "combined condition with comment should parse without error");
+
+        # Test invalid trailing text after %else (should have error)
+        source = "%new-style\n"
+            "%ifdef Test\n"
+            "class TestClass {}\n"
+            "%else junk\n"
+            "class ElseClass {}\n"
+            "%endif\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertTrue(root.hasError(), "%else with invalid trailing text should have error");
+
+        # Test invalid trailing text after %endif (should have error)
+        source = "%new-style\n"
+            "%ifdef Test\n"
+            "class TestClass {}\n"
+            "%endif junk\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertTrue(root.hasError(), "%endif with invalid trailing text should have error");
+
+        # Sanity check: valid trailing comments still work
+        source = "%new-style\n"
+            "%ifdef Test\n"
+            "class TestClass {}\n"
+            "%else # valid comment\n"
+            "class ElseClass {}\n"
+            "%endif # valid comment\n";
+        tree = parser.parse(source);
+        root = tree.getRootNode();
+        assertFalse(root.hasError(), "valid trailing comments should not have error");
     }
 
     # Tree tests

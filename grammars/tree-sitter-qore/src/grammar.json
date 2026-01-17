@@ -361,16 +361,8 @@
                   "value": "%if"
                 },
                 {
-                  "type": "STRING",
-                  "value": "("
-                },
-                {
                   "type": "SYMBOL",
-                  "name": "_expression"
-                },
-                {
-                  "type": "STRING",
-                  "value": ")"
+                  "name": "_if_condition"
                 }
               ]
             },
@@ -382,16 +374,8 @@
                   "value": "%elif"
                 },
                 {
-                  "type": "STRING",
-                  "value": "("
-                },
-                {
                   "type": "SYMBOL",
-                  "name": "_expression"
-                },
-                {
-                  "type": "STRING",
-                  "value": ")"
+                  "name": "_if_condition"
                 }
               ]
             },
@@ -414,6 +398,127 @@
             },
             {
               "type": "BLANK"
+            }
+          ]
+        }
+      ]
+    },
+    "_if_condition": {
+      "type": "SYMBOL",
+      "name": "_if_or_expression"
+    },
+    "_if_or_expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_if_and_expression"
+            },
+            {
+              "type": "STRING",
+              "value": "||"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_if_or_expression"
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_if_and_expression"
+        }
+      ]
+    },
+    "_if_and_expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_if_unary_expression"
+            },
+            {
+              "type": "STRING",
+              "value": "&&"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_if_and_expression"
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_if_unary_expression"
+        }
+      ]
+    },
+    "_if_unary_expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "!"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_if_unary_expression"
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_if_primary_expression"
+        }
+      ]
+    },
+    "_if_primary_expression": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "defined"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "identifier"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_if_condition"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
             }
           ]
         }

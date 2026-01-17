@@ -146,12 +146,36 @@ module.exports = grammar({
         // Conditional parsing directives
         seq('%ifdef', $.identifier),
         seq('%ifndef', $.identifier),
-        seq('%if', '(', $._expression, ')'),
-        seq('%elif', '(', $._expression, ')'),
+        seq('%if', $._if_condition),
+        seq('%elif', $._if_condition),
         '%else',
         '%endif',
       ),
       optional($.newline),
+    ),
+
+    // Condition expression for %if/%elif directives
+    // Supports: defined(X), !defined(X), && and || operators, parentheses
+    _if_condition: $ => $._if_or_expression,
+
+    _if_or_expression: $ => choice(
+      seq($._if_and_expression, '||', $._if_or_expression),
+      $._if_and_expression,
+    ),
+
+    _if_and_expression: $ => choice(
+      seq($._if_unary_expression, '&&', $._if_and_expression),
+      $._if_unary_expression,
+    ),
+
+    _if_unary_expression: $ => choice(
+      seq('!', $._if_unary_expression),
+      $._if_primary_expression,
+    ),
+
+    _if_primary_expression: $ => choice(
+      seq('defined', '(', $.identifier, ')'),
+      seq('(', $._if_condition, ')'),
     ),
 
     module_name: $ => choice(
