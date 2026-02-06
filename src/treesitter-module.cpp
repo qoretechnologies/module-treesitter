@@ -36,27 +36,24 @@ QoreClass* initTreeSitterNodeClass(QoreNamespace& ns);
 QoreClass* initTreeSitterCursorClass(QoreNamespace& ns);
 QoreClass* initTreeSitterQueryClass(QoreNamespace& ns);
 
-static QoreStringNode* treesitter_module_init();
-static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns);
+static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink);
+static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink);
 static void treesitter_module_delete();
 
-// qore module symbols
-DLLEXPORT char qore_module_name[] = "treesitter";
-DLLEXPORT char qore_module_version[] = TREESITTER_MODULE_VERSION;
-DLLEXPORT char qore_module_description[] = "Tree-sitter parsing library bindings for Qore";
-DLLEXPORT char qore_module_author[] = "Qore Technologies, s.r.o.";
-DLLEXPORT char qore_module_url[] = "https://qore.org";
-DLLEXPORT int qore_module_api_major = QORE_MODULE_API_MAJOR;
-DLLEXPORT int qore_module_api_minor = QORE_MODULE_API_MINOR;
-DLLEXPORT qore_module_init_t qore_module_init = treesitter_module_init;
-DLLEXPORT qore_module_ns_init_t qore_module_ns_init = treesitter_module_ns_init;
-DLLEXPORT qore_module_delete_t qore_module_delete = treesitter_module_delete;
-#ifdef _QORE_HAS_QL_MIT
-DLLEXPORT qore_license_t qore_module_license = QL_MIT;
-#else
-DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
-#endif
-DLLEXPORT char qore_module_license_str[] = "MIT";
+extern "C" DLLEXPORT void treesitter_qore_module_desc(QoreModuleInfo& mod_info) {
+    mod_info.name = "treesitter";
+    mod_info.version = TREESITTER_MODULE_VERSION;
+    mod_info.desc = "Tree-sitter parsing library bindings for Qore";
+    mod_info.author = "Qore Technologies, s.r.o.";
+    mod_info.url = "https://qore.org";
+    mod_info.api_major = QORE_MODULE_API_MAJOR;
+    mod_info.api_minor = QORE_MODULE_API_MINOR;
+    mod_info.init = treesitter_module_init;
+    mod_info.ns_init = treesitter_module_ns_init;
+    mod_info.del = treesitter_module_delete;
+    mod_info.license = QL_MIT;
+    mod_info.license_str = "MIT";
+}
 
 // Module namespace
 QoreNamespace TreeSitterNS("TreeSitter");
@@ -70,7 +67,7 @@ void raiseTreeSitterException(ExceptionSink* xsink, const char* err, const char*
     xsink->raiseException(err, desc);
 }
 
-static QoreStringNode* treesitter_module_init() {
+static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     // Initialize the language registry
     TreeSitterLanguages::isLanguageSupported("python");  // Triggers init without allocation
 
@@ -96,10 +93,9 @@ static QoreStringNode* treesitter_module_init() {
     TreeSitterNS.addConstant("LANG_JAVASCRIPT", new QoreStringNode("javascript"));
     TreeSitterNS.addConstant("LANG_KOTLIN", new QoreStringNode("kotlin"));
 
-    return nullptr;
 }
 
-static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns) {
+static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink) {
     rns->addNamespace(TreeSitterNS.copy());
 }
 
