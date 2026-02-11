@@ -16,7 +16,8 @@ This module provides bindings to the [tree-sitter](https://tree-sitter.github.io
 - Kotlin
 - TypeScript
 - TSX
-- Qore
+
+**Note:** The Qore tree-sitter grammar is maintained in the [Qore repository](https://github.com/qoretechnologies/qore) as part of the `astparser` module (`modules/astparser/grammars/tree-sitter-qore/`).
 
 ## Features
 
@@ -24,8 +25,6 @@ This module provides bindings to the [tree-sitter](https://tree-sitter.github.io
 - **Tree cursors**: Memory-efficient tree traversal
 - **Query API**: Pattern matching for syntax highlighting and code analysis
 - **Thread-safe**: All classes are thread-safe
-- **Grammar parity**: The bundled Qore grammar is intended to mirror the Qore parser to support language servers
-
 ## Building
 
 ```bash
@@ -53,11 +52,6 @@ TreeSitterNode root = tree.getRootNode();
 
 printf("Root type: %s\n", root.getType());
 printf("S-expression: %s\n", root.toSexp());
-
-# Parse Qore code
-TreeSitterParser qoreParser("qore");
-TreeSitterTree qoreTree = qoreParser.parse("class Test { constructor() {} }");
-printf("Qore root: %s\n", qoreTree.getRootNode().getType());
 ```
 
 ## Classes

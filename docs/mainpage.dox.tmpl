@@ -14,12 +14,12 @@
     - IDE-like features (code folding, outline views)
     - Static analysis tools
     - Code transformation tools
-    - Language servers that rely on accurate Qore syntax trees
-
-    The bundled Qore grammar is intended to mirror the Qore parser so that language tooling can depend on
-    a faithful representation of Qore syntax.
 
     To use this module, use \c "%requires treesitter" in your code.
+
+    @note The Qore tree-sitter grammar is maintained in the
+    <a href="https://github.com/qoretechnologies/qore">Qore repository</a> as part of the \c astparser
+    module (\c modules/astparser/grammars/tree-sitter-qore/).
 
     @section treesitter_languages Supported Grammars
 
@@ -32,7 +32,6 @@
     - Kotlin
     - TypeScript
     - TSX
-    - Qore
 
     @section treesitter_classes Classes
 
@@ -271,8 +270,8 @@ if (root.hasError()) {
     @section treesitter_release_notes Release Notes
 
     @subsection treesitter_v1_0 treesitter Module Version 1.0
-    - Initial release with support for Python, Java, JSON, YAML, JavaScript (js), Kotlin (kt), TypeScript (ts), TSX,
-      and Qore (q)
+    - Initial release with support for Python, Java, JSON, YAML, JavaScript (js), Kotlin (kt), TypeScript (ts), and
+      TSX
     - Full tree-sitter API: parsing, tree traversal, cursors, and queries
     - Incremental parsing support
     - Query pattern matching for syntax highlighting and code analysis

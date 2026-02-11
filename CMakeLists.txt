@@ -151,7 +151,6 @@ add_library(tree-sitter-grammars STATIC
     ${tree-sitter-typescript_SOURCE_DIR}/typescript/src/scanner.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/parser.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/scanner.c
-    ${CMAKE_SOURCE_DIR}/grammars/tree-sitter-qore/src/parser.c
 )
 target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter_SOURCE_DIR}/lib/include
@@ -163,7 +162,6 @@ target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter-kotlin_SOURCE_DIR}/src
     ${tree-sitter-typescript_SOURCE_DIR}/typescript/src
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src
-    ${CMAKE_SOURCE_DIR}/grammars/tree-sitter-qore/src
 )
 
 set(QPP_SRC
