@@ -126,6 +126,19 @@ if(NOT tree-sitter-typescript_POPULATED)
     FetchContent_Populate(tree-sitter-typescript)
 endif()
 
+# Find the Qore grammar installed by astparser
+find_path(TREE_SITTER_QORE_SRC_DIR
+    NAMES parser.c
+    PATHS ${CMAKE_INSTALL_PREFIX}/share/qore/treesitter/tree-sitter-qore/src
+          /usr/share/qore/treesitter/tree-sitter-qore/src
+          /usr/local/share/qore/treesitter/tree-sitter-qore/src
+    NO_DEFAULT_PATH
+)
+if(NOT TREE_SITTER_QORE_SRC_DIR)
+    message(FATAL_ERROR "Qore tree-sitter grammar not found. Install the astparser module first.")
+endif()
+message(STATUS "Found Qore tree-sitter grammar: ${TREE_SITTER_QORE_SRC_DIR}")
+
 # Build tree-sitter as a static library
 add_library(tree-sitter-lib STATIC
     ${tree-sitter_SOURCE_DIR}/lib/src/lib.c
@@ -151,6 +164,7 @@ add_library(tree-sitter-grammars STATIC
     ${tree-sitter-typescript_SOURCE_DIR}/typescript/src/scanner.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/parser.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/scanner.c
+    ${TREE_SITTER_QORE_SRC_DIR}/parser.c
 )
 target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter_SOURCE_DIR}/lib/include
@@ -162,6 +176,7 @@ target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter-kotlin_SOURCE_DIR}/src
     ${tree-sitter-typescript_SOURCE_DIR}/typescript/src
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src
+    ${TREE_SITTER_QORE_SRC_DIR}
 )
 
 set(QPP_SRC

@@ -32,6 +32,7 @@ extern "C" {
     const TSLanguage* tree_sitter_kotlin();
     const TSLanguage* tree_sitter_typescript();
     const TSLanguage* tree_sitter_tsx();
+    const TSLanguage* tree_sitter_qore();
 }
 
 std::unordered_map<std::string, const TSLanguage*> TreeSitterLanguages::languages;
@@ -53,6 +54,7 @@ void TreeSitterLanguages::initLanguages() {
     languages["typescript"] = tree_sitter_typescript();
     languages["ts"] = tree_sitter_typescript();  // Alias
     languages["tsx"] = tree_sitter_tsx();
+    languages["qore"] = tree_sitter_qore();
 
     initialized = true;
 }
@@ -79,6 +81,7 @@ QoreListNode* TreeSitterLanguages::getLanguageList() {
     list->push(new QoreStringNode("kotlin"), nullptr);
     list->push(new QoreStringNode("typescript"), nullptr);
     list->push(new QoreStringNode("tsx"), nullptr);
+    list->push(new QoreStringNode("qore"), nullptr);
     return list;
 }
 
