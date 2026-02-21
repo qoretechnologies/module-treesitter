@@ -47,8 +47,7 @@ qclass TreeSitterCursor [arg=TreeSitterCursor* cursor; ns=TreeSitter; vparent=Qo
 /** @param node the starting node for the cursor
 */
 TreeSitterCursor::constructor(TreeSitterNode[TreeSitterNode] node) {
-    ReferenceHolder<TreeSitterNode> holder(node, xsink);
-    self->setPrivate(CID_TREESITTERCURSOR, new TreeSitterCursor(node));
+    self->setPrivate(CID_TREESITTERCURSOR, new TreeSitterCursor(*node));
 }
 
 //! Destroys the cursor
@@ -70,8 +69,7 @@ TreeSitterCursor::copy() {
 /** @param node the new starting node
 */
 nothing TreeSitterCursor::reset(TreeSitterNode[TreeSitterNode] node) {
-    ReferenceHolder<TreeSitterNode> holder(node, xsink);
-    cursor->reset(node);
+    cursor->reset(*node);
 }
 
 //! Get the node at the current cursor position

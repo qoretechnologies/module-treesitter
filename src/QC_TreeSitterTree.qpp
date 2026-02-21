@@ -135,6 +135,5 @@ foreach hash<auto> range in (changes) {
     @endcode
 */
 list<hash<auto>> TreeSitterTree::getChangedRanges(TreeSitterTree[TreeSitterTree] other) {
-    ReferenceHolder<TreeSitterTree> holder(other, xsink);
-    return tree->getChangedRanges(other, xsink);
+    return tree->getChangedRanges(*other, xsink);
 }

@@ -417,6 +417,5 @@ TreeSitterCursor TreeSitterNode::getCursor() {
     @return True if the nodes represent the same position in the same tree
 */
 bool TreeSitterNode::equals(TreeSitterNode[TreeSitterNode] other) {
-    ReferenceHolder<TreeSitterNode> holder(other, xsink);
-    return node->equals(other);
+    return node->equals(*other);
 }

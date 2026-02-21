@@ -131,8 +131,7 @@ TreeSitterTree tree2 = parser.parseIncremental("def bar(): return 42", tree1);
     @endcode
 */
 TreeSitterTree TreeSitterParser::parseIncremental(string source, TreeSitterTree[TreeSitterTree] old_tree) {
-    ReferenceHolder<TreeSitterTree> holder(old_tree, xsink);
-    TreeSitterTree* tree = parser->parseIncremental(source, old_tree, xsink);
+    TreeSitterTree* tree = parser->parseIncremental(source, *old_tree, xsink);
     if (*xsink || !tree) {
         return QoreValue();
     }

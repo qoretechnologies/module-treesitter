@@ -124,8 +124,7 @@ foreach hash<auto> match in (matches) {
     @endcode
 */
 list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node) {
-    ReferenceHolder<TreeSitterNode> holder(node, xsink);
-    return query->execute(node, xsink);
+    return query->execute(*node, xsink);
 }
 
 //! Execute the query and return all captures in order
@@ -159,8 +158,7 @@ foreach hash<auto> cap in (captures) {
     @endcode
 */
 list<hash<auto>> TreeSitterQuery::captures(TreeSitterNode[TreeSitterNode] node) {
-    ReferenceHolder<TreeSitterNode> holder(node, xsink);
-    return query->captures(node, xsink);
+    return query->captures(*node, xsink);
 }
 
 //! Get the number of patterns in the query
