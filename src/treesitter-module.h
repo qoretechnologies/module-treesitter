@@ -29,6 +29,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <mutex>
 
 // Module version
 #define TREESITTER_MODULE_VERSION "1.0.0"
@@ -61,9 +62,18 @@ public:
     static QoreListNode* getLanguageList();
     static bool isLanguageSupported(const char* name);
 
+    //! Get the bundled highlight query for a language
+    /** @param name the language name
+        @param xsink exception sink for error reporting
+        @return the query string, or nullptr if not found
+    */
+    static QoreStringNode* getHighlightQuery(const char* name, ExceptionSink* xsink);
+
 private:
     static void initLanguages();
     static std::unordered_map<std::string, const TSLanguage*> languages;
+    static std::unordered_map<std::string, std::string> query_cache;
+    static std::mutex query_cache_mutex;
     static bool initialized;
 };
 

@@ -49,7 +49,7 @@ printf("Root type: %s\n", root.getType());
 qclass TreeSitterParser [arg=TreeSitterParser* parser; ns=TreeSitter; vparent=Qore::Serializable];
 
 //! Creates a new TreeSitterParser for the given language
-/** @param language the language to parse (e.g., "python", "java", "json", "yaml", "javascript", "sql")
+/** @param language the language to parse (e.g., "python", "java", "json", "yaml", "javascript", "kotlin", "typescript", "tsx", "qore")
 
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 
@@ -168,7 +168,7 @@ int TreeSitterParser::getTimeout() {
     @par Example:
     @code{.py}
 list<string> langs = TreeSitterParser::getSupportedLanguages();
-# Returns: ("python", "java", "json", "yaml", "javascript", "sql")
+# Returns: ("python", "java", "json", "yaml", "javascript", "kotlin", "typescript", "tsx", "qore")
     @endcode
 */
 static list<string> TreeSitterParser::getSupportedLanguages() {
@@ -182,4 +182,52 @@ static list<string> TreeSitterParser::getSupportedLanguages() {
 */
 static bool TreeSitterParser::isLanguageSupported(string language) {
     return TreeSitterLanguages::isLanguageSupported(language->c_str());
+}
+
+//! Get the bundled upstream highlight query for a language
+/** Returns the contents of the upstream \c highlights.scm query file shipped with the
+    grammar.  The result is cached after the first call for each language.
+
+    Supported language names: \c "python", \c "java", \c "json", \c "yaml",
+    \c "javascript" (alias: \c "js"), \c "kotlin" (alias: \c "kt"),
+    \c "typescript" (alias: \c "ts"), \c "tsx".
+
+    @param language the language name or alias
+
+    @return the contents of the upstream highlights.scm query file for the given language
+
+    @throw TREESITTER-QUERY-ERROR if the language is not supported or the query file cannot be read
+
+    @par Example: Retrieve and use an upstream highlight query
+    @code{.py}
+%new-style
+%require-types
+%strict-args
+
+%requires treesitter
+
+# Get the bundled upstream highlight query for Python
+string query_text = TreeSitterParser::getHighlightQuery("python");
+
+# Create a query object and run it against parsed source
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def hello(): pass");
+TreeSitterQuery query("python", query_text);
+list<hash<auto>> captures = query.captures(tree.getRootNode());
+foreach hash<auto> cap in (captures) {
+    printf("%s: %s (bytes %d-%d)\n", cap.name, cap.node.text,
+        cap.node.start_byte, cap.node.end_byte);
+}
+    @endcode
+
+    @par Example: Use an alias
+    @code{.py}
+# "js" is an alias for "javascript"
+string js_query = TreeSitterParser::getHighlightQuery("js");
+    @endcode
+
+    @since treesitter 1.0
+*/
+static string TreeSitterParser::getHighlightQuery(string language) {
+    return TreeSitterLanguages::getHighlightQuery(language->c_str(), xsink);
 }

@@ -22,6 +22,9 @@
 
 #include "treesitter-module.h"
 
+#include <fstream>
+#include <sstream>
+
 // External language declarations
 extern "C" {
     const TSLanguage* tree_sitter_python();
@@ -36,7 +39,24 @@ extern "C" {
 }
 
 std::unordered_map<std::string, const TSLanguage*> TreeSitterLanguages::languages;
+std::unordered_map<std::string, std::string> TreeSitterLanguages::query_cache;
+std::mutex TreeSitterLanguages::query_cache_mutex;
 bool TreeSitterLanguages::initialized = false;
+
+// Map of language names to their canonical names for query file lookup
+static const std::unordered_map<std::string, std::string> query_lang_map = {
+    {"python", "python"},
+    {"java", "java"},
+    {"json", "json"},
+    {"yaml", "yaml"},
+    {"javascript", "javascript"},
+    {"js", "javascript"},
+    {"kotlin", "kotlin"},
+    {"kt", "kotlin"},
+    {"typescript", "typescript"},
+    {"ts", "typescript"},
+    {"tsx", "typescript"},
+};
 
 void TreeSitterLanguages::initLanguages() {
     if (initialized) {
@@ -88,4 +108,42 @@ QoreListNode* TreeSitterLanguages::getLanguageList() {
 bool TreeSitterLanguages::isLanguageSupported(const char* name) {
     initLanguages();
     return languages.find(name) != languages.end();
+}
+
+QoreStringNode* TreeSitterLanguages::getHighlightQuery(const char* name, ExceptionSink* xsink) {
+    std::string lang_name(name);
+
+    // Resolve aliases to canonical language names
+    auto alias_it = query_lang_map.find(lang_name);
+    if (alias_it == query_lang_map.end()) {
+        xsink->raiseException("TREESITTER-QUERY-ERROR",
+            "no highlight query available for language '%s'", name);
+        return nullptr;
+    }
+    const std::string& canonical = alias_it->second;
+
+    std::lock_guard<std::mutex> lock(query_cache_mutex);
+
+    // Check cache
+    auto cache_it = query_cache.find(canonical);
+    if (cache_it != query_cache.end()) {
+        return new QoreStringNode(cache_it->second);
+    }
+
+    // Build the file path and read (file I/O is fast for small .scm files)
+    std::string path = std::string(TREESITTER_QUERY_DIR) + "/" + canonical + "/highlights.scm";
+
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        xsink->raiseException("TREESITTER-QUERY-ERROR",
+            "cannot open highlight query file: %s", path.c_str());
+        return nullptr;
+    }
+
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    query_cache[canonical] = ss.str();
+    const std::string& content = query_cache[canonical];
+
+    return new QoreStringNode(content);
 }

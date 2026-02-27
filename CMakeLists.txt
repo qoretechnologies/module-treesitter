@@ -48,7 +48,7 @@ include(FetchContent)
 FetchContent_Declare(
     tree-sitter
     GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
-    GIT_TAG v0.26.3
+    GIT_TAG v0.26.5
 )
 FetchContent_GetProperties(tree-sitter)
 if(NOT tree-sitter_POPULATED)
@@ -59,7 +59,7 @@ endif()
 FetchContent_Declare(
     tree-sitter-python
     GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-python.git
-    GIT_TAG v0.23.6
+    GIT_TAG v0.25.0
 )
 FetchContent_GetProperties(tree-sitter-python)
 if(NOT tree-sitter-python_POPULATED)
@@ -99,7 +99,7 @@ endif()
 FetchContent_Declare(
     tree-sitter-javascript
     GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-javascript.git
-    GIT_TAG v0.23.1
+    GIT_TAG v0.25.0
 )
 FetchContent_GetProperties(tree-sitter-javascript)
 if(NOT tree-sitter-javascript_POPULATED)
@@ -245,6 +245,38 @@ else()
     install(FILES ${QPP_META_SRC}
             DESTINATION ${CMAKE_INSTALL_DATADIR}/qore/metadata)
 endif()
+
+# Install upstream highlight queries for each grammar
+# Derive the data dir from QORE_METADATA_DIR (set by QoreConfig.cmake)
+# e.g. /usr/share/qore/metadata -> /usr/share/qore/treesitter/queries
+get_filename_component(QORE_DATA_BASE_DIR "${QORE_METADATA_DIR}" DIRECTORY)
+set(TS_QUERY_INSTALL_DIR "${QORE_DATA_BASE_DIR}/treesitter/queries")
+
+# Define grammar query install targets
+set(TS_GRAMMAR_QUERY_SOURCES
+    "python:${tree-sitter-python_SOURCE_DIR}/queries/highlights.scm"
+    "java:${tree-sitter-java_SOURCE_DIR}/queries/highlights.scm"
+    "json:${tree-sitter-json_SOURCE_DIR}/queries/highlights.scm"
+    "yaml:${tree-sitter-yaml_SOURCE_DIR}/queries/highlights.scm"
+    "javascript:${tree-sitter-javascript_SOURCE_DIR}/queries/highlights.scm"
+    "kotlin:${tree-sitter-kotlin_SOURCE_DIR}/queries/highlights.scm"
+    "typescript:${tree-sitter-typescript_SOURCE_DIR}/queries/highlights.scm"
+)
+
+foreach(entry ${TS_GRAMMAR_QUERY_SOURCES})
+    string(REPLACE ":" ";" entry_list "${entry}")
+    list(GET entry_list 0 lang)
+    list(GET entry_list 1 scm_file)
+    if(EXISTS "${scm_file}")
+        install(FILES "${scm_file}"
+                DESTINATION "${TS_QUERY_INSTALL_DIR}/${lang}"
+                RENAME "highlights.scm")
+    endif()
+endforeach()
+
+# Pass the installed query path to C++ so getHighlightQuery() can find the files
+target_compile_definitions(${module_name} PRIVATE
+    TREESITTER_QUERY_DIR="${TS_QUERY_INSTALL_DIR}")
 
 qore_config_info()
 
