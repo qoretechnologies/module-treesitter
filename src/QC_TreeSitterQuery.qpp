@@ -131,7 +131,7 @@ foreach hash<auto> match in (matches) {
     @endcode
 */
 list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node) {
-    return query->execute(*node, xsink);
+    return query->execute(*node, xsink, nullptr);
 }
 
 //! Execute the query and return all captures in order
@@ -172,7 +172,7 @@ foreach hash<auto> cap in (captures) {
     @endcode
 */
 list<hash<auto>> TreeSitterQuery::captures(TreeSitterNode[TreeSitterNode] node) {
-    return query->captures(*node, xsink);
+    return query->captures(*node, xsink, nullptr);
 }
 
 //! Get the number of patterns in the query
@@ -294,4 +294,73 @@ list<hash<auto>> captures = query.captures(root);
 */
 nothing TreeSitterQuery::setMaxStartDepth(int max_depth) {
     query->setMaxStartDepth(max_depth);
+}
+
+//! Execute the query with metadata for \c \#is?/\#is-not? directive evaluation
+/** @param node the node to search
+    @param metadata a hash of directive metadata from a prior query run (e.g., from resolveLocals())
+
+    The metadata hash maps property names (e.g., "local") to lists of node byte ranges
+    where that property is true. When a query pattern contains \c \#is? or \c \#is-not?,
+    the captured node's byte range is looked up in the metadata to determine if the
+    predicate passes.
+
+    @return a list of match hashes (same format as execute())
+
+    @par Example:
+    @code{.py}
+# Resolve local variables first
+hash<auto> metadata = TreeSitterQuery::resolveLocals("javascript", root);
+# Run highlights query with local variable awareness
+list<hash<auto>> matches = query.execute(root, metadata);
+    @endcode
+*/
+list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node, *hash<auto> metadata) {
+    return query->execute(*node, xsink, metadata);
+}
+
+//! Execute the query and return captures with metadata for directive evaluation
+/** @param node the node to search
+    @param metadata a hash of directive metadata from a prior query run
+
+    @return a list of capture hashes (same format as captures())
+*/
+list<hash<auto>> TreeSitterQuery::captures(TreeSitterNode[TreeSitterNode] node, *hash<auto> metadata) {
+    return query->captures(*node, xsink, metadata);
+}
+
+//! Resolve local variable scopes for a language and return metadata
+/** Runs the \c locals.scm query for the given language to identify local scopes,
+    definitions, and references. Returns a metadata hash suitable for passing to
+    execute() or captures() to enable \c \#is?/\#is-not? directive evaluation.
+
+    @param language the language name
+    @param node the root node to analyze
+
+    @return a metadata hash with a "local" key containing byte ranges of local variable references
+
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+    @throw TREESITTER-QUERY-ERROR if the locals query cannot be loaded or parsed
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("javascript");
+TreeSitterTree tree = parser.parse(source);
+TreeSitterNode root = tree.getRootNode();
+
+# Resolve locals and use for highlighting
+hash<auto> metadata = TreeSitterQuery::resolveLocals("javascript", root);
+string hl_src = TreeSitterParser::getHighlightQuery("javascript");
+TreeSitterQuery query("javascript", hl_src);
+list<hash<auto>> captures = query.captures(root, metadata);
+    @endcode
+
+    @since treesitter 1.0
+*/
+static *hash<auto> TreeSitterQuery::resolveLocals(string language, TreeSitterNode[TreeSitterNode] node) [flags=RET_VALUE_ONLY] {
+    QoreHashNode* result = TreeSitterQuery::resolveLocals(language->c_str(), *node, xsink);
+    if (!result) {
+        return QoreValue();
+    }
+    return result;
 }

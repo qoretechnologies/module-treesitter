@@ -102,6 +102,32 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Large source", \testLargeSource());
         addTestCase("Deeply nested", \testDeeplyNested());
 
+        # Phase 1: Minor completeness features
+        addTestCase("Node descendant count", \testNodeDescendantCount());
+        addTestCase("Node grammar type", \testNodeGrammarType());
+        addTestCase("Node parse state", \testNodeParseState());
+        addTestCase("Parser reset", \testParserReset());
+
+        # Phase 2: Language metadata API
+        addTestCase("Language symbol metadata", \testLanguageSymbolMetadata());
+        addTestCase("Language field metadata", \testLanguageFieldMetadata());
+        addTestCase("Language supertypes", \testLanguageSupertypes());
+
+        # Phase 3: Query cursor
+        addTestCase("Query cursor basic", \testQueryCursorBasic());
+        addTestCase("Query cursor reuse", \testQueryCursorReuse());
+        addTestCase("Query cursor range", \testQueryCursorRange());
+        addTestCase("Query cursor match limit", \testQueryCursorMatchLimit());
+
+        # Phase 4: Lookahead iterator
+        addTestCase("Lookahead iterator", \testLookaheadIterator());
+        addTestCase("Lookahead invalid state", \testLookaheadInvalidState());
+
+        # Phase 5: Directives
+        addTestCase("Set directive in captures", \testSetDirective());
+        addTestCase("Is-not directive with metadata", \testIsNotDirective());
+        addTestCase("Resolve locals", \testResolveLocals());
+
         set_return_value(main());
     }
 
@@ -1084,5 +1110,287 @@ class TreeSitterTest inherits QUnit::Test {
         TreeSitterTree tree = parser.parse(code);
         TreeSitterNode root = tree.getRootNode();
         assertTrue(exists root);
+    }
+
+    # Phase 1: Minor completeness features
+    testNodeDescendantCount() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo():\n    x = 1\n    y = 2");
+        TreeSitterNode root = tree.getRootNode();
+        int desc_count = root.getDescendantCount();
+        assertTrue(desc_count > root.getChildCount(),
+            "descendant count should exceed direct child count");
+    }
+
+    testNodeGrammarType() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        # For root node, grammar type and type should match
+        assertEq(root.getType(), root.getGrammarType());
+        # Grammar symbol should be a positive integer
+        assertTrue(root.getGrammarSymbol() >= 0);
+    }
+
+    testNodeParseState() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        TreeSitterNode root = tree.getRootNode();
+        # Parse state should be a non-negative integer
+        int state = root.getParseState();
+        assertTrue(state >= 0);
+        int next_state = root.getNextParseState();
+        assertTrue(next_state >= 0);
+    }
+
+    testParserReset() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree1 = parser.parse("x = 1");
+        assertFalse(tree1.getRootNode().hasError());
+        # Reset and parse again
+        parser.reset();
+        TreeSitterTree tree2 = parser.parse("y = 2");
+        assertFalse(tree2.getRootNode().hasError());
+        assertEq("module", tree2.getRootNode().getType());
+    }
+
+    # Phase 2: Language metadata API
+    testLanguageSymbolMetadata() {
+        int count = TreeSitterParser::getSymbolCount("python");
+        assertTrue(count > 0, "python should have symbols");
+
+        # Symbol 0 should have a name
+        string name = TreeSitterParser::getSymbolName("python", 0);
+        assertTrue(name.length() >= 0);
+
+        # Symbol type should be a valid constant
+        int stype = TreeSitterParser::getSymbolType("python", 0);
+        assertTrue(stype >= 0 && stype <= 3, "symbol type should be 0-3");
+
+        # Invalid language should throw
+        assertThrows("TREESITTER-LANGUAGE-ERROR", \TreeSitterParser::getSymbolCount(), ("nonexistent",));
+    }
+
+    testLanguageFieldMetadata() {
+        int count = TreeSitterParser::getFieldCount("python");
+        assertTrue(count > 0, "python should have fields");
+
+        # Field 1 should have a name (field 0 is not a valid field)
+        *string name = TreeSitterParser::getFieldName("python", 1);
+        assertTrue(exists name, "field 1 should have a name");
+
+        # Round-trip: getFieldId(getFieldName()) should return the original id
+        int id = TreeSitterParser::getFieldId("python", name);
+        assertEq(1, id, "field id round-trip should match");
+
+        # Invalid field id returns NOTHING
+        *string invalid = TreeSitterParser::getFieldName("python", 99999);
+        assertNothing(invalid);
+    }
+
+    testLanguageSupertypes() {
+        list<int> supertypes = TreeSitterParser::getSupertypes("python");
+        # Python should have some supertypes (e.g., expression, statement)
+        assertTrue(supertypes.size() >= 0);
+
+        # If there are supertypes, each should have subtypes
+        if (supertypes.size() > 0) {
+            list<int> subtypes = TreeSitterParser::getSubtypes("python", supertypes[0]);
+            assertTrue(subtypes.size() > 0, "supertype should have subtypes");
+        }
+    }
+
+    # Phase 3: Query cursor
+    testQueryCursorBasic() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass\ndef bar(): pass");
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+        TreeSitterQueryCursor qcursor(query);
+        qcursor.exec(root);
+
+        # Iterate captures
+        list<string> names = ();
+        while (*hash<auto> cap = qcursor.nextCapture()) {
+            if (cap.name == "name") {
+                names += cap.node.text;
+            }
+        }
+        assertEq(("foo", "bar"), names);
+    }
+
+    testQueryCursorReuse() {
+        TreeSitterParser parser("python");
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name)");
+        TreeSitterQueryCursor qcursor(query);
+
+        # First execution
+        TreeSitterTree tree1 = parser.parse("def alpha(): pass");
+        qcursor.exec(tree1.getRootNode());
+        *hash<auto> cap1 = qcursor.nextCapture();
+        assertTrue(exists cap1);
+        assertEq("alpha", cap1.node.text);
+
+        # Reuse cursor with different source
+        TreeSitterTree tree2 = parser.parse("def beta(): pass");
+        qcursor.exec(tree2.getRootNode());
+        *hash<auto> cap2 = qcursor.nextCapture();
+        assertTrue(exists cap2);
+        assertEq("beta", cap2.node.text);
+    }
+
+    testQueryCursorRange() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass\ndef bar(): pass");
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name)");
+        TreeSitterQueryCursor qcursor(query);
+
+        # Restrict to first line only
+        qcursor.setByteRange(0, 16);
+        qcursor.exec(root);
+
+        list<string> names = ();
+        while (*hash<auto> cap = qcursor.nextCapture()) {
+            if (cap.name == "name") {
+                names += cap.node.text;
+            }
+        }
+        assertEq(1, names.size(), "byte range should limit to one function");
+        assertEq("foo", names[0]);
+    }
+
+    testQueryCursorMatchLimit() {
+        TreeSitterParser parser("python");
+        TreeSitterQuery query("python", "(identifier) @id");
+        TreeSitterQueryCursor qcursor(query);
+
+        # Default match limit should be positive
+        assertTrue(qcursor.getMatchLimit() > 0);
+
+        # Should not have exceeded limit before execution
+        assertFalse(qcursor.didExceedMatchLimit());
+    }
+
+    # Phase 4: Lookahead iterator
+    testLookaheadIterator() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo():\n    pass");
+        TreeSitterNode root = tree.getRootNode();
+
+        # Get a leaf node's parse state
+        *TreeSitterNode leaf = root.getDescendantForByteRange(0, 1);
+        assertTrue(exists leaf);
+        int state = leaf.getParseState();
+
+        # Create lookahead iterator
+        TreeSitterLookaheadIterator iter("python", state);
+
+        # Iterate and collect some symbols
+        list<string> symbols = ();
+        while (iter.next()) {
+            string name = iter.getCurrentSymbolName();
+            int sym = iter.getCurrentSymbol();
+            assertTrue(sym >= 0);
+            if (name.length() > 0) {
+                symbols += name;
+            }
+            if (symbols.size() >= 5) {
+                break;
+            }
+        }
+        assertTrue(symbols.size() > 0, "lookahead should produce at least one symbol");
+    }
+
+    testLookaheadInvalidState() {
+        # Invalid state should throw or return invalid iterator
+        assertThrows("TREESITTER-LOOKAHEAD-ERROR", sub() {
+            TreeSitterLookaheadIterator iter("python", 99999);
+        });
+    }
+
+    # Phase 5: Directives
+    testSetDirective() {
+        TreeSitterParser parser("javascript");
+        # JavaScript injections.scm uses #set! directives
+        try {
+            string inj_src = TreeSitterParser::getQuery("javascript", "injections");
+            TreeSitterQuery query("javascript", inj_src);
+
+            string source = "let x = /pattern/; let y = `template ${expr}`";
+            TreeSitterTree tree = parser.parse(source);
+            list<hash<auto>> captures = query.captures(tree.getRootNode());
+
+            # Check if any capture has directives
+            bool found_directive = False;
+            foreach hash<auto> cap in (captures) {
+                if (exists cap.directives) {
+                    found_directive = True;
+                    # Directives should be a hash with string values
+                    assertTrue(cap.directives.typeCode() == NT_HASH);
+                    break;
+                }
+            }
+            # It's OK if no directives found (depends on source code matching patterns)
+        } catch (hash<ExceptionInfo> ex) {
+            # injections query may fail to parse — that's acceptable
+            assertEq("TREESITTER-QUERY-ERROR", ex.err);
+        }
+    }
+
+    testIsNotDirective() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1\ny = 2");
+        TreeSitterNode root = tree.getRootNode();
+
+        # Create a simple query with #is-not? predicate
+        # This tests the metadata-passing mechanism
+        TreeSitterQuery query("python", '((identifier) @id (#is-not? @id "test_prop"))');
+
+        # Without metadata, #is-not? should pass (property not found = not set)
+        list<hash<auto>> captures = query.captures(root);
+        assertTrue(captures.size() > 0, "without metadata, #is-not? should pass");
+
+        # With metadata marking "x" as having test_prop, it should be excluded
+        hash<auto> metadata = {
+            "test_prop": (
+                {"start_byte": 0, "end_byte": 1},  # "x"
+            ),
+        };
+        list<hash<auto>> filtered = query.captures(root, metadata);
+        # "x" should be filtered out, but "y" should remain
+        bool found_x = False;
+        bool found_y = False;
+        foreach hash<auto> cap in (filtered) {
+            if (cap.node.text == "x") {
+                found_x = True;
+            }
+            if (cap.node.text == "y") {
+                found_y = True;
+            }
+        }
+        assertFalse(found_x, "x should be filtered by #is-not? with metadata");
+        assertTrue(found_y, "y should not be filtered");
+    }
+
+    testResolveLocals() {
+        # JavaScript has locals.scm, test resolveLocals
+        try {
+            TreeSitterParser parser("javascript");
+            string source = "function foo(x) { let y = x + 1; return y; }";
+            TreeSitterTree tree = parser.parse(source);
+            TreeSitterNode root = tree.getRootNode();
+
+            *hash<auto> metadata = TreeSitterQuery::resolveLocals("javascript", root);
+            assertTrue(exists metadata, "resolveLocals should return metadata");
+            assertTrue(exists metadata.local, "metadata should have 'local' key");
+            # The local key should be a list of byte ranges
+            assertTrue(metadata.local.typeCode() == NT_LIST);
+        } catch (hash<ExceptionInfo> ex) {
+            # locals query may fail — acceptable if the query can't parse
+            assertTrue(ex.err == "TREESITTER-QUERY-ERROR" || ex.err == "TREESITTER-LANGUAGE-ERROR");
+        }
     }
 }

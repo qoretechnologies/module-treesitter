@@ -112,6 +112,13 @@ bool TreeSitterParser::setIncludedRanges(const TSRange* ranges, uint32_t count, 
     return ts_parser_set_included_ranges(parser, ranges, count);
 }
 
+void TreeSitterParser::reset() {
+    if (parser) {
+        std::lock_guard<std::mutex> lock(mutex);
+        ts_parser_reset(parser);
+    }
+}
+
 void TreeSitterParser::setTimeout(uint64_t micros) {
     // Note: In tree-sitter v0.26+, the timeout API changed from ts_parser_set_timeout_micros()
     // to a progress callback system via ts_parser_parse_with_options(). Since we use

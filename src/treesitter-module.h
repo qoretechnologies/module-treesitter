@@ -40,6 +40,8 @@ class TreeSitterTree;
 class TreeSitterNode;
 class TreeSitterCursor;
 class TreeSitterQuery;
+class TreeSitterQueryCursor;
+class TreeSitterLookaheadIterator;
 
 // Class IDs for private data
 DLLLOCAL extern qore_classid_t CID_TREESITTERPARSER;
@@ -47,6 +49,8 @@ DLLLOCAL extern qore_classid_t CID_TREESITTERTREE;
 DLLLOCAL extern qore_classid_t CID_TREESITTERNODE;
 DLLLOCAL extern qore_classid_t CID_TREESITTERCURSOR;
 DLLLOCAL extern qore_classid_t CID_TREESITTERQUERY;
+DLLLOCAL extern qore_classid_t CID_TREESITTERQUERYCURSOR;
+DLLLOCAL extern qore_classid_t CID_TREESITTERLOOKAHEADITERATOR;
 
 // QoreClass pointers
 DLLLOCAL extern QoreClass* QC_TREESITTERPARSER;
@@ -54,6 +58,8 @@ DLLLOCAL extern QoreClass* QC_TREESITTERTREE;
 DLLLOCAL extern QoreClass* QC_TREESITTERNODE;
 DLLLOCAL extern QoreClass* QC_TREESITTERCURSOR;
 DLLLOCAL extern QoreClass* QC_TREESITTERQUERY;
+DLLLOCAL extern QoreClass* QC_TREESITTERQUERYCURSOR;
+DLLLOCAL extern QoreClass* QC_TREESITTERLOOKAHEADITERATOR;
 
 // Language registry
 class TreeSitterLanguages {

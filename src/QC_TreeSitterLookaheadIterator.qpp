@@ -1,0 +1,131 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_TreeSitterLookaheadIterator.cpp defines the TreeSitterLookaheadIterator class */
+/*
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "treesitter-module.h"
+#include "TreeSitterLookaheadIterator.h"
+
+//! The TreeSitterLookaheadIterator class enables code completion via parser state inspection
+/** The TreeSitterLookaheadIterator allows inspecting what tokens the parser expects at a
+    given parse state. This is the foundation for tree-sitter-based code completion.
+
+    Use TreeSitterNode::getParseState() to get the parse state of a node, then create
+    a lookahead iterator to enumerate valid next symbols.
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def foo():");
+TreeSitterNode root = tree.getRootNode();
+
+# Get a leaf node and its parse state
+TreeSitterNode leaf = root.getDescendantForByteRange(10, 10);
+int state = leaf.getParseState();
+
+# Create iterator and enumerate expected symbols
+TreeSitterLookaheadIterator iter("python", state);
+while (iter.next()) {
+    printf("Expected: %s (symbol %d)\n", iter.getCurrentSymbolName(), iter.getCurrentSymbol());
+}
+    @endcode
+
+    @since treesitter 1.0
+*/
+qclass TreeSitterLookaheadIterator [arg=TreeSitterLookaheadIterator* iter; ns=TreeSitter; vparent=Qore::Serializable];
+
+//! Create a lookahead iterator for a language at a given parse state
+/** @param language the language name (e.g., "python", "javascript")
+    @param state the parse state (from TreeSitterNode::getParseState())
+
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+    @throw TREESITTER-LOOKAHEAD-ERROR if the state is invalid for the language
+*/
+TreeSitterLookaheadIterator::constructor(string language, int state) {
+    ReferenceHolder<TreeSitterLookaheadIterator> holder(
+        new TreeSitterLookaheadIterator(language->c_str(), static_cast<TSStateId>(state), xsink), xsink);
+    if (*xsink) {
+        return;
+    }
+    if (!holder->isValid()) {
+        return;
+    }
+    self->setPrivate(CID_TREESITTERLOOKAHEADITERATOR, holder.release());
+}
+
+//! Destroys the iterator
+/**
+*/
+TreeSitterLookaheadIterator::destructor() {
+    iter->deref(xsink);
+}
+
+//! Returns a copy of the iterator
+/**
+*/
+TreeSitterLookaheadIterator::copy() {
+    xsink->raiseException("TREESITTERLOOKAHEADITERATOR-COPY-ERROR",
+        "TreeSitterLookaheadIterator objects cannot be copied; create a new iterator instead");
+}
+
+//! Reset the iterator to a new language and parse state
+/** @param language the language name
+    @param state the new parse state
+
+    @return True if the reset was successful, False if the state is invalid
+
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+*/
+bool TreeSitterLookaheadIterator::reset(string language, int state) {
+    return iter->reset(language->c_str(), static_cast<TSStateId>(state), xsink);
+}
+
+//! Reset the iterator to a new parse state (same language)
+/** @param state the new parse state
+
+    @return True if the reset was successful, False if the state is invalid
+*/
+bool TreeSitterLookaheadIterator::resetState(int state) {
+    return iter->resetState(static_cast<TSStateId>(state));
+}
+
+//! Advance to the next expected symbol
+/** @return True if there is another symbol, False when iteration is complete
+*/
+bool TreeSitterLookaheadIterator::next() {
+    return iter->next();
+}
+
+//! Get the current symbol ID
+/** @return the symbol ID of the current expected symbol
+
+    Use TreeSitterParser::getSymbolName() to convert the ID to a name, or
+    use getCurrentSymbolName() for convenience.
+*/
+int TreeSitterLookaheadIterator::getCurrentSymbol() [flags=CONSTANT] {
+    return iter->getCurrentSymbol();
+}
+
+//! Get the name of the current expected symbol
+/** @return the symbol name string
+*/
+string TreeSitterLookaheadIterator::getCurrentSymbolName() [flags=CONSTANT] {
+    return new QoreStringNode(iter->getCurrentSymbolName());
+}

@@ -30,11 +30,15 @@ void preinitTreeSitterTreeClass();
 void preinitTreeSitterNodeClass();
 void preinitTreeSitterCursorClass();
 void preinitTreeSitterQueryClass();
+void preinitTreeSitterQueryCursorClass();
+void preinitTreeSitterLookaheadIteratorClass();
 QoreClass* initTreeSitterParserClass(QoreNamespace& ns);
 QoreClass* initTreeSitterTreeClass(QoreNamespace& ns);
 QoreClass* initTreeSitterNodeClass(QoreNamespace& ns);
 QoreClass* initTreeSitterCursorClass(QoreNamespace& ns);
 QoreClass* initTreeSitterQueryClass(QoreNamespace& ns);
+QoreClass* initTreeSitterQueryCursorClass(QoreNamespace& ns);
+QoreClass* initTreeSitterLookaheadIteratorClass(QoreNamespace& ns);
 
 static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink);
 static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink);
@@ -77,6 +81,8 @@ static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xs
     preinitTreeSitterNodeClass();
     preinitTreeSitterCursorClass();
     preinitTreeSitterQueryClass();
+    preinitTreeSitterQueryCursorClass();
+    preinitTreeSitterLookaheadIteratorClass();
 
     // Now fully initialize the classes and add to namespace
     TreeSitterNS.addSystemClass(initTreeSitterParserClass(TreeSitterNS));
@@ -84,6 +90,8 @@ static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xs
     TreeSitterNS.addSystemClass(initTreeSitterNodeClass(TreeSitterNS));
     TreeSitterNS.addSystemClass(initTreeSitterCursorClass(TreeSitterNS));
     TreeSitterNS.addSystemClass(initTreeSitterQueryClass(TreeSitterNS));
+    TreeSitterNS.addSystemClass(initTreeSitterQueryCursorClass(TreeSitterNS));
+    TreeSitterNS.addSystemClass(initTreeSitterLookaheadIteratorClass(TreeSitterNS));
 
     // Add constants for language names
     TreeSitterNS.addConstant("LANG_PYTHON", new QoreStringNode("python"));
@@ -96,6 +104,11 @@ static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xs
     TreeSitterNS.addConstant("LANG_MARKDOWN", new QoreStringNode("markdown"));
     TreeSitterNS.addConstant("LANG_QORE", new QoreStringNode("qore"));
 
+    // Symbol type constants
+    TreeSitterNS.addConstant("SYMBOL_TYPE_REGULAR", static_cast<int64>(TSSymbolTypeRegular));
+    TreeSitterNS.addConstant("SYMBOL_TYPE_ANONYMOUS", static_cast<int64>(TSSymbolTypeAnonymous));
+    TreeSitterNS.addConstant("SYMBOL_TYPE_SUPERTYPE", static_cast<int64>(TSSymbolTypeSupertype));
+    TreeSitterNS.addConstant("SYMBOL_TYPE_AUXILIARY", static_cast<int64>(TSSymbolTypeAuxiliary));
 }
 
 static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink) {

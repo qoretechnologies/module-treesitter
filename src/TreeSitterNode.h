@@ -148,11 +148,29 @@ public:
     //! Find the smallest named node that spans the given point range
     DLLLOCAL TreeSitterNode* getNamedDescendantForPointRange(TSPoint start, TSPoint end) const;
 
+    //! Get the total number of descendants
+    DLLLOCAL uint32_t getDescendantCount() const;
+
+    //! Get the grammar type (before aliasing)
+    DLLLOCAL const char* getGrammarType() const;
+
+    //! Get the grammar symbol ID (before aliasing)
+    DLLLOCAL TSSymbol getGrammarSymbol() const;
+
+    //! Get the parse state of this node
+    DLLLOCAL TSStateId getParseState() const;
+
+    //! Get the parse state after this node
+    DLLLOCAL TSStateId getNextParseState() const;
+
     //! Compare with another node for equality
     DLLLOCAL bool equals(TreeSitterNode* other) const;
 
     //! Get the full source string
     DLLLOCAL const std::string& getSource() const { return source; }
+
+    //! Build a node_info hash for query results (shared utility)
+    DLLLOCAL static QoreHashNode* buildNodeInfo(TSNode node, const std::string& src, ExceptionSink* xsink);
 
 private:
     TSNode node;

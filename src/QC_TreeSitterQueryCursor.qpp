@@ -1,0 +1,203 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_TreeSitterQueryCursor.cpp defines the TreeSitterQueryCursor class */
+/*
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "treesitter-module.h"
+#include "TreeSitterQueryCursor.h"
+#include "TreeSitterQuery.h"
+#include "TreeSitterNode.h"
+
+//! The TreeSitterQueryCursor class provides reusable query execution
+/** Unlike calling TreeSitterQuery::execute() or TreeSitterQuery::captures() which create
+    and destroy a cursor on every call, TreeSitterQueryCursor maintains a persistent cursor
+    that can be reused across multiple query executions. This reduces allocation overhead
+    for interactive editing scenarios where queries are re-run on every keystroke.
+
+    @par Example:
+    @code{.py}
+TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+TreeSitterQueryCursor qcursor(query);
+
+# Execute on first version
+qcursor.exec(tree1.getRootNode());
+while (*hash<auto> cap = qcursor.nextCapture()) {
+    printf("Found: %s\n", cap.node.text);
+}
+
+# Reuse cursor for next version (no new allocation)
+qcursor.exec(tree2.getRootNode());
+while (*hash<auto> cap = qcursor.nextCapture()) {
+    printf("Found: %s\n", cap.node.text);
+}
+    @endcode
+
+    @since treesitter 1.0
+*/
+qclass TreeSitterQueryCursor [arg=TreeSitterQueryCursor* qcursor; ns=TreeSitter; vparent=Qore::Serializable];
+
+//! Create a query cursor from a query
+/** @param query the query to execute with this cursor
+*/
+TreeSitterQueryCursor::constructor(TreeSitterQuery[TreeSitterQuery] query) {
+    self->setPrivate(CID_TREESITTERQUERYCURSOR, new TreeSitterQueryCursor(*query));
+}
+
+//! Destroys the query cursor
+/**
+*/
+TreeSitterQueryCursor::destructor() {
+    qcursor->deref(xsink);
+}
+
+//! Returns a copy of the query cursor
+/**
+*/
+TreeSitterQueryCursor::copy() {
+    xsink->raiseException("TREESITTERQUERYCURSOR-COPY-ERROR",
+        "TreeSitterQueryCursor objects cannot be copied; create a new cursor instead");
+}
+
+//! Start executing the query on a node
+/** @param node the node to search (usually the root node)
+
+    Resets the cursor and begins a new query execution. Call nextMatch() or
+    nextCapture() to iterate results.
+*/
+nothing TreeSitterQueryCursor::exec(TreeSitterNode[TreeSitterNode] node) {
+    qcursor->exec(*node);
+}
+
+//! Get the next match from the query execution
+/** @return a match hash with \c pattern_index and \c captures keys, or NOTHING
+    when no more matches remain
+
+    Query predicates are automatically evaluated and non-matching results are skipped.
+
+    @par Example:
+    @code{.py}
+qcursor.exec(root);
+while (*hash<auto> match = qcursor.nextMatch()) {
+    printf("Pattern %d:\n", match.pattern_index);
+    foreach hash<auto> cap in (match.captures) {
+        printf("  %s: %s\n", cap.name, cap.node.text);
+    }
+}
+    @endcode
+*/
+*hash<auto> TreeSitterQueryCursor::nextMatch() {
+    QoreHashNode* result = qcursor->nextMatch(xsink);
+    if (!result) {
+        return QoreValue();
+    }
+    return result;
+}
+
+//! Get the next capture from the query execution
+/** @return a capture hash with \c name, \c pattern_index, and \c node keys, or
+    NOTHING when no more captures remain
+
+    Captures are returned in source order, making this method ideal for syntax
+    highlighting. Query predicates are automatically evaluated.
+
+    @par Example:
+    @code{.py}
+qcursor.exec(root);
+while (*hash<auto> cap = qcursor.nextCapture()) {
+    printf("%s: %s at bytes %d-%d\n", cap.name, cap.node.text,
+           cap.node.start_byte, cap.node.end_byte);
+}
+    @endcode
+*/
+*hash<auto> TreeSitterQueryCursor::nextCapture() {
+    QoreHashNode* result = qcursor->nextCapture(xsink);
+    if (!result) {
+        return QoreValue();
+    }
+    return result;
+}
+
+//! Set the byte range for query execution
+/** @param start_byte the start byte offset (inclusive)
+    @param end_byte the end byte offset (exclusive)
+
+    @see TreeSitterQuery::setByteRange()
+*/
+nothing TreeSitterQueryCursor::setByteRange(int start_byte, int end_byte) {
+    qcursor->setByteRange(start_byte, end_byte);
+}
+
+//! Set the point range for query execution
+/** @param start_row the start row (0-indexed)
+    @param start_column the start column (0-indexed)
+    @param end_row the end row (0-indexed)
+    @param end_column the end column (0-indexed)
+*/
+nothing TreeSitterQueryCursor::setPointRange(int start_row, int start_column,
+                                              int end_row, int end_column) {
+    TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
+    TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
+    qcursor->setPointRange(start, end);
+}
+
+//! Clear the byte range restriction
+/**
+*/
+nothing TreeSitterQueryCursor::clearByteRange() {
+    qcursor->clearByteRange();
+}
+
+//! Clear the point range restriction
+/**
+*/
+nothing TreeSitterQueryCursor::clearPointRange() {
+    qcursor->clearPointRange();
+}
+
+//! Set the maximum start depth for query execution
+/** @param max_depth the maximum depth
+*/
+nothing TreeSitterQueryCursor::setMaxStartDepth(int max_depth) {
+    qcursor->setMaxStartDepth(max_depth);
+}
+
+//! Set the match limit for query execution
+/** @param limit the maximum number of in-progress matches
+
+    If the match limit is exceeded during query execution, some matches may be
+    dropped. Check didExceedMatchLimit() after iteration to detect this.
+*/
+nothing TreeSitterQueryCursor::setMatchLimit(int limit) {
+    qcursor->setMatchLimit(limit);
+}
+
+//! Get the current match limit
+/** @return the match limit
+*/
+int TreeSitterQueryCursor::getMatchLimit() [flags=CONSTANT] {
+    return qcursor->getMatchLimit();
+}
+
+//! Check if the match limit was exceeded during the last query execution
+/** @return True if the match limit was exceeded and some matches may have been dropped
+*/
+bool TreeSitterQueryCursor::didExceedMatchLimit() [flags=CONSTANT] {
+    return qcursor->didExceedMatchLimit();
+}

@@ -231,6 +231,8 @@ set(QPP_SRC
     src/QC_TreeSitterNode.qpp
     src/QC_TreeSitterCursor.qpp
     src/QC_TreeSitterQuery.qpp
+    src/QC_TreeSitterQueryCursor.qpp
+    src/QC_TreeSitterLookaheadIterator.qpp
 )
 
 set(CPP_SRC
@@ -240,6 +242,8 @@ set(CPP_SRC
     src/TreeSitterNode.cpp
     src/TreeSitterCursor.cpp
     src/TreeSitterQuery.cpp
+    src/TreeSitterQueryCursor.cpp
+    src/TreeSitterLookaheadIterator.cpp
     src/TreeSitterLanguages.cpp
 )
 

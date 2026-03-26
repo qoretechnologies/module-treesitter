@@ -77,6 +77,9 @@ public:
     */
     DLLLOCAL bool setIncludedRanges(const TSRange* ranges, uint32_t count, ExceptionSink* xsink);
 
+    //! Reset the parser state
+    DLLLOCAL void reset();
+
     //! Check if parser is valid
     DLLLOCAL bool isValid() const { return parser != nullptr; }
 

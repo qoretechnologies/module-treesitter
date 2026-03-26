@@ -95,7 +95,8 @@ void TreeSitterQuery::applyCursorSettings(TSQueryCursor* cursor) const {
 }
 
 bool TreeSitterQuery::evaluatePredicates(uint32_t pattern_index, const TSQueryMatch& match,
-                                          const std::string& src) const {
+                                          const std::string& src,
+                                          const QoreHashNode* metadata) const {
     if (!query) {
         return true;
     }
@@ -238,42 +239,251 @@ bool TreeSitterQuery::evaluatePredicates(uint32_t pattern_index, const TSQueryMa
             if (predicate == "not-any-of?" && found) {
                 return false;
             }
+        } else if (predicate == "is?" || predicate == "is-not?") {
+            // #is? and #is-not? check metadata set by a prior query (e.g., locals.scm)
+            if (args.size() < 1) {
+                continue;
+            }
+            // First arg is the property name (usually a string like "local")
+            std::string prop_name;
+            uint32_t capture_idx = UINT32_MAX;
+            if (args[0].type == PredicateArg::CAPTURE) {
+                capture_idx = args[0].value_id;
+                // Property name comes from arg[1] if present, otherwise use "local" default
+                if (args.size() >= 2 && args[1].type == PredicateArg::STRING) {
+                    prop_name = getStringValue(args[1].value_id);
+                } else {
+                    continue;
+                }
+            } else {
+                prop_name = getStringValue(args[0].value_id);
+                // Capture is arg[1] if present
+                if (args.size() >= 2 && args[1].type == PredicateArg::CAPTURE) {
+                    capture_idx = args[1].value_id;
+                }
+            }
+
+            // Check if the captured node is in the metadata
+            bool found_in_metadata = false;
+            if (metadata && capture_idx != UINT32_MAX) {
+                // Find the capture node
+                TSNode cap_node = {};
+                bool have_node = false;
+                for (uint16_t c = 0; c < match.capture_count; c++) {
+                    if (match.captures[c].index == capture_idx) {
+                        cap_node = match.captures[c].node;
+                        have_node = true;
+                        break;
+                    }
+                }
+                if (have_node) {
+                    uint32_t node_start = ts_node_start_byte(cap_node);
+                    uint32_t node_end = ts_node_end_byte(cap_node);
+                    // Look up prop_name in metadata; value is a list of {start_byte, end_byte} hashes
+                    QoreValue prop_val = metadata->getKeyValue(prop_name.c_str());
+                    if (prop_val.getType() == NT_LIST) {
+                        const QoreListNode* ranges = prop_val.get<const QoreListNode>();
+                        ConstListIterator li(ranges);
+                        while (li.next()) {
+                            if (li.getValue().getType() == NT_HASH) {
+                                const QoreHashNode* rh = li.getValue().get<const QoreHashNode>();
+                                uint32_t rs = static_cast<uint32_t>(rh->getKeyValue("start_byte").getAsBigInt());
+                                uint32_t re = static_cast<uint32_t>(rh->getKeyValue("end_byte").getAsBigInt());
+                                if (rs == node_start && re == node_end) {
+                                    found_in_metadata = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (predicate == "is?" && !found_in_metadata) {
+                return false;
+            }
+            if (predicate == "is-not?" && found_in_metadata) {
+                return false;
+            }
+        } else if (predicate == "set!") {
+            // #set! is a directive, not a filter — skip it during predicate evaluation
+            continue;
         }
-        // Unknown predicates (e.g., #is?, #set!) are silently ignored
+        // Other unknown predicates are silently ignored
     }
 
     return true;
 }
 
-//! Build a node_info hash including text from source
-static QoreHashNode* buildNodeInfo(TSNode node, const std::string& src, ExceptionSink* xsink) {
-    uint32_t start = ts_node_start_byte(node);
-    uint32_t end = ts_node_end_byte(node);
-
-    QoreHashNode* node_info = new QoreHashNode(autoTypeInfo);
-    node_info->setKeyValue("type", new QoreStringNode(ts_node_type(node)), xsink);
-    node_info->setKeyValue("start_byte", static_cast<int64>(start), xsink);
-    node_info->setKeyValue("end_byte", static_cast<int64>(end), xsink);
-
-    TSPoint start_point = ts_node_start_point(node);
-    TSPoint end_point = ts_node_end_point(node);
-    node_info->setKeyValue("start_row", static_cast<int64>(start_point.row), xsink);
-    node_info->setKeyValue("start_column", static_cast<int64>(start_point.column), xsink);
-    node_info->setKeyValue("end_row", static_cast<int64>(end_point.row), xsink);
-    node_info->setKeyValue("end_column", static_cast<int64>(end_point.column), xsink);
-
-    // Include the node text from the source
-    if (start < src.size() && end <= src.size()) {
-        node_info->setKeyValue("text",
-            new QoreStringNode(src.substr(start, end - start)), xsink);
-    } else {
-        node_info->setKeyValue("text", new QoreStringNode(""), xsink);
+QoreHashNode* TreeSitterQuery::collectDirectives(uint32_t pattern_index, const TSQueryMatch& match,
+                                                   const std::string& src, ExceptionSink* xsink) const {
+    if (!query) {
+        return nullptr;
     }
 
-    return node_info;
+    uint32_t step_count;
+    const TSQueryPredicateStep* steps = ts_query_predicates_for_pattern(query, pattern_index, &step_count);
+    if (step_count == 0) {
+        return nullptr;
+    }
+
+    QoreHashNode* directives = nullptr;
+    uint32_t i = 0;
+    while (i < step_count) {
+        if (steps[i].type != TSQueryPredicateStepTypeString) {
+            while (i < step_count && steps[i].type != TSQueryPredicateStepTypeDone) {
+                ++i;
+            }
+            if (i < step_count) {
+                ++i;
+            }
+            continue;
+        }
+
+        uint32_t name_len;
+        const char* pred_name = ts_query_string_value_for_id(query, steps[i].value_id, &name_len);
+        std::string predicate(pred_name, name_len);
+        ++i;
+
+        // Collect arguments
+        std::vector<std::pair<int, uint32_t>> dargs;
+        while (i < step_count && steps[i].type != TSQueryPredicateStepTypeDone) {
+            dargs.push_back({steps[i].type == TSQueryPredicateStepTypeCapture ? 0 : 1, steps[i].value_id});
+            ++i;
+        }
+        if (i < step_count) {
+            ++i;
+        }
+
+        if (predicate == "set!") {
+            if (dargs.size() >= 2 && dargs[0].first == 1 && dargs[1].first == 1) {
+                uint32_t klen, vlen;
+                const char* key = ts_query_string_value_for_id(query, dargs[0].second, &klen);
+                const char* val = ts_query_string_value_for_id(query, dargs[1].second, &vlen);
+                if (key && val) {
+                    if (!directives) {
+                        directives = new QoreHashNode(autoTypeInfo);
+                    }
+                    directives->setKeyValue(std::string(key, klen).c_str(),
+                        new QoreStringNode(val, vlen, QCS_UTF8), xsink);
+                }
+            } else if (dargs.size() >= 1 && dargs[0].first == 1) {
+                uint32_t klen;
+                const char* key = ts_query_string_value_for_id(query, dargs[0].second, &klen);
+                if (key) {
+                    if (!directives) {
+                        directives = new QoreHashNode(autoTypeInfo);
+                    }
+                    directives->setKeyValue(std::string(key, klen).c_str(), true, xsink);
+                }
+            }
+        }
+    }
+
+    return directives;
 }
 
-QoreListNode* TreeSitterQuery::execute(TreeSitterNode* node, ExceptionSink* xsink) {
+QoreHashNode* TreeSitterQuery::resolveLocals(const char* lang_name, TreeSitterNode* node,
+                                              ExceptionSink* xsink) {
+    QoreStringNode* locals_src = TreeSitterLanguages::getQuery(lang_name, "locals", xsink);
+    if (!locals_src || *xsink) {
+        if (locals_src) {
+            locals_src->deref();
+        }
+        return nullptr;
+    }
+
+    TreeSitterQuery locals_query(lang_name, locals_src->c_str(), xsink);
+    locals_src->deref();
+    if (*xsink || !locals_query.isValid()) {
+        return nullptr;
+    }
+
+    const std::string& src = node->getSource();
+
+    TSQueryCursor* cursor = ts_query_cursor_new();
+    ts_query_cursor_exec(cursor, locals_query.getQuery(), node->getNode());
+
+    struct ScopeInfo {
+        uint32_t start_byte;
+        uint32_t end_byte;
+        std::vector<std::string> definitions;
+    };
+    std::vector<ScopeInfo> scopes;
+
+    struct RefInfo {
+        uint32_t start_byte;
+        uint32_t end_byte;
+        std::string name;
+    };
+    std::vector<RefInfo> references;
+
+    TSQueryMatch match;
+    while (ts_query_cursor_next_match(cursor, &match)) {
+        for (uint16_t i = 0; i < match.capture_count; i++) {
+            uint32_t cname_len;
+            const char* cap_name = ts_query_capture_name_for_id(locals_query.getQuery(),
+                match.captures[i].index, &cname_len);
+            std::string capture_name(cap_name, cname_len);
+            TSNode cap_node = match.captures[i].node;
+
+            if (capture_name == "local.scope") {
+                ScopeInfo scope;
+                scope.start_byte = ts_node_start_byte(cap_node);
+                scope.end_byte = ts_node_end_byte(cap_node);
+                scopes.push_back(scope);
+            } else if (capture_name == "local.definition") {
+                std::string def_name = getNodeText(cap_node, src);
+                uint32_t def_start = ts_node_start_byte(cap_node);
+                for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+                    if (def_start >= it->start_byte && def_start < it->end_byte) {
+                        it->definitions.push_back(def_name);
+                        break;
+                    }
+                }
+            } else if (capture_name == "local.reference") {
+                RefInfo ref;
+                ref.start_byte = ts_node_start_byte(cap_node);
+                ref.end_byte = ts_node_end_byte(cap_node);
+                ref.name = getNodeText(cap_node, src);
+                references.push_back(ref);
+            }
+        }
+    }
+
+    ts_query_cursor_delete(cursor);
+
+    QoreListNode* local_ranges = new QoreListNode(autoTypeInfo);
+    for (const auto& ref : references) {
+        bool is_local = false;
+        for (const auto& scope : scopes) {
+            if (ref.start_byte >= scope.start_byte && ref.end_byte <= scope.end_byte) {
+                for (const auto& def : scope.definitions) {
+                    if (def == ref.name) {
+                        is_local = true;
+                        break;
+                    }
+                }
+                if (is_local) {
+                    break;
+                }
+            }
+        }
+        if (is_local) {
+            QoreHashNode* range = new QoreHashNode(autoTypeInfo);
+            range->setKeyValue("start_byte", static_cast<int64>(ref.start_byte), xsink);
+            range->setKeyValue("end_byte", static_cast<int64>(ref.end_byte), xsink);
+            local_ranges->push(range, xsink);
+        }
+    }
+
+    QoreHashNode* metadata = new QoreHashNode(autoTypeInfo);
+    metadata->setKeyValue("local", local_ranges, xsink);
+    return metadata;
+}
+
+QoreListNode* TreeSitterQuery::execute(TreeSitterNode* node, ExceptionSink* xsink,
+                                        const QoreHashNode* metadata) {
     if (!query || !node) {
         return new QoreListNode(autoTypeInfo);
     }
@@ -288,8 +498,7 @@ QoreListNode* TreeSitterQuery::execute(TreeSitterNode* node, ExceptionSink* xsin
     TSQueryMatch match;
 
     while (ts_query_cursor_next_match(cursor, &match)) {
-        // Evaluate predicates — skip match if predicates fail
-        if (!evaluatePredicates(match.pattern_index, match, src)) {
+        if (!evaluatePredicates(match.pattern_index, match, src, metadata)) {
             continue;
         }
 
@@ -304,7 +513,13 @@ QoreListNode* TreeSitterQuery::execute(TreeSitterNode* node, ExceptionSink* xsin
             uint32_t name_len;
             const char* name = ts_query_capture_name_for_id(query, capture.index, &name_len);
             capture_hash->setKeyValue("name", new QoreStringNode(name, name_len, QCS_UTF8), xsink);
-            capture_hash->setKeyValue("node", buildNodeInfo(capture.node, src, xsink), xsink);
+            capture_hash->setKeyValue("node", TreeSitterNode::buildNodeInfo(capture.node, src, xsink), xsink);
+
+            QoreHashNode* directives = collectDirectives(match.pattern_index, match, src, xsink);
+            if (directives) {
+                capture_hash->setKeyValue("directives", directives, xsink);
+            }
+
             captures->push(capture_hash, xsink);
         }
         match_hash->setKeyValue("captures", captures, xsink);
@@ -315,7 +530,8 @@ QoreListNode* TreeSitterQuery::execute(TreeSitterNode* node, ExceptionSink* xsin
     return matches;
 }
 
-QoreListNode* TreeSitterQuery::captures(TreeSitterNode* node, ExceptionSink* xsink) {
+QoreListNode* TreeSitterQuery::captures(TreeSitterNode* node, ExceptionSink* xsink,
+                                         const QoreHashNode* metadata) {
     if (!query || !node) {
         return new QoreListNode(autoTypeInfo);
     }
@@ -331,8 +547,7 @@ QoreListNode* TreeSitterQuery::captures(TreeSitterNode* node, ExceptionSink* xsi
     uint32_t capture_index;
 
     while (ts_query_cursor_next_capture(cursor, &match, &capture_index)) {
-        // Evaluate predicates — skip capture if predicates fail
-        if (!evaluatePredicates(match.pattern_index, match, src)) {
+        if (!evaluatePredicates(match.pattern_index, match, src, metadata)) {
             ts_query_cursor_remove_match(cursor, match.id);
             continue;
         }
@@ -344,7 +559,13 @@ QoreListNode* TreeSitterQuery::captures(TreeSitterNode* node, ExceptionSink* xsi
         const char* name = ts_query_capture_name_for_id(query, capture.index, &name_len);
         capture_hash->setKeyValue("name", new QoreStringNode(name, name_len, QCS_UTF8), xsink);
         capture_hash->setKeyValue("pattern_index", static_cast<int64>(match.pattern_index), xsink);
-        capture_hash->setKeyValue("node", buildNodeInfo(capture.node, src, xsink), xsink);
+        capture_hash->setKeyValue("node", TreeSitterNode::buildNodeInfo(capture.node, src, xsink), xsink);
+
+        QoreHashNode* directives = collectDirectives(match.pattern_index, match, src, xsink);
+        if (directives) {
+            capture_hash->setKeyValue("directives", directives, xsink);
+        }
+
         all_captures->push(capture_hash, xsink);
     }
 

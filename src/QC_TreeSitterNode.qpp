@@ -499,6 +499,57 @@ string TreeSitterNode::toSexp() {
     return new QoreObject(QC_TREESITTERNODE, getProgram(), desc);
 }
 
+//! Get the total number of descendants of this node
+/** @return the number of descendant nodes (including all children, grandchildren, etc.)
+
+    Useful for performance heuristics when deciding whether to re-query a subtree.
+*/
+int TreeSitterNode::getDescendantCount() [flags=CONSTANT] {
+    return node->getDescendantCount();
+}
+
+//! Get the grammar-level type of this node (before aliasing)
+/** @return the grammar type string
+
+    Unlike getType(), which returns the user-visible type that may be aliased,
+    this returns the original grammar-level type. For most nodes these are the same,
+    but some grammars use aliasing to present different names to users.
+*/
+string TreeSitterNode::getGrammarType() [flags=CONSTANT] {
+    return new QoreStringNode(node->getGrammarType());
+}
+
+//! Get the grammar-level symbol ID of this node (before aliasing)
+/** @return the grammar symbol ID
+
+    Unlike the user-visible symbol, this returns the original grammar-level symbol.
+*/
+int TreeSitterNode::getGrammarSymbol() [flags=CONSTANT] {
+    return node->getGrammarSymbol();
+}
+
+//! Get the parse state of this node
+/** @return the parser state ID at this node
+
+    The parse state can be used with TreeSitterLookaheadIterator to determine
+    what tokens the parser expects next. This enables tree-sitter-based code completion.
+
+    @see TreeSitterLookaheadIterator
+*/
+int TreeSitterNode::getParseState() [flags=CONSTANT] {
+    return node->getParseState();
+}
+
+//! Get the parse state after this node
+/** @return the parser state ID after this node
+
+    @see getParseState()
+    @see TreeSitterLookaheadIterator
+*/
+int TreeSitterNode::getNextParseState() [flags=CONSTANT] {
+    return node->getNextParseState();
+}
+
 //! Create a cursor for efficient tree traversal starting at this node
 /** @return a new TreeSitterCursor positioned at this node
 */

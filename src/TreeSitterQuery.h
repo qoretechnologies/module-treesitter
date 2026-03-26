@@ -47,16 +47,20 @@ public:
     //! Execute the query on a node
     /** @param node the node to search
         @param xsink exception sink
+        @param metadata optional metadata for #is?/#is-not? directive evaluation
         @return list of matches, each containing capture information
     */
-    DLLLOCAL QoreListNode* execute(TreeSitterNode* node, ExceptionSink* xsink);
+    DLLLOCAL QoreListNode* execute(TreeSitterNode* node, ExceptionSink* xsink,
+                                    const QoreHashNode* metadata = nullptr);
 
     //! Execute the query and return all captures
     /** @param node the node to search
         @param xsink exception sink
+        @param metadata optional metadata for #is?/#is-not? directive evaluation
         @return list of captures with node and capture name
     */
-    DLLLOCAL QoreListNode* captures(TreeSitterNode* node, ExceptionSink* xsink);
+    DLLLOCAL QoreListNode* captures(TreeSitterNode* node, ExceptionSink* xsink,
+                                     const QoreHashNode* metadata = nullptr);
 
     //! Get the number of patterns in the query
     DLLLOCAL uint32_t getPatternCount() const;
@@ -103,6 +107,27 @@ public:
     //! Clear the point range restriction
     DLLLOCAL void clearPointRange();
 
+    //! Evaluate predicates for a pattern match (public for TreeSitterQueryCursor access)
+    /** @param metadata optional metadata hash for #is?/#is-not? evaluation
+        @return true if all predicates pass (match is valid) */
+    DLLLOCAL bool evaluatePredicates(uint32_t pattern_index, const TSQueryMatch& match,
+                                      const std::string& src,
+                                      const QoreHashNode* metadata = nullptr) const;
+
+    //! Collect #set! directives for a pattern match
+    /** @return a hash of directive key/value pairs, or nullptr if none */
+    DLLLOCAL QoreHashNode* collectDirectives(uint32_t pattern_index, const TSQueryMatch& match,
+                                              const std::string& src, ExceptionSink* xsink) const;
+
+    //! Resolve locals query into metadata for #is?/#is-not? local
+    /** Runs the locals.scm query to build scope/definition/reference data
+        @return metadata hash suitable for passing to execute()/captures() */
+    DLLLOCAL static QoreHashNode* resolveLocals(const char* language, TreeSitterNode* node,
+                                                 ExceptionSink* xsink);
+
+    //! Get the language pointer
+    DLLLOCAL const TSLanguage* getLanguage() const { return language; }
+
 private:
     TSQuery* query;
     const TSLanguage* language;
@@ -126,11 +151,6 @@ private:
 
     //! Apply stored cursor settings to a query cursor
     DLLLOCAL void applyCursorSettings(TSQueryCursor* cursor) const;
-
-    //! Evaluate predicates for a pattern match
-    /** @return true if all predicates pass (match is valid) */
-    DLLLOCAL bool evaluatePredicates(uint32_t pattern_index, const TSQueryMatch& match,
-                                      const std::string& src) const;
 
     //! Get the text of a node from the source string
     DLLLOCAL static std::string getNodeText(TSNode node, const std::string& src);

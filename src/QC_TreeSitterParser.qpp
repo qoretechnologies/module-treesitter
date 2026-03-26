@@ -184,49 +184,22 @@ static bool TreeSitterParser::isLanguageSupported(string language) {
     return TreeSitterLanguages::isLanguageSupported(language->c_str());
 }
 
-//! Get the bundled upstream highlight query for a language
-/** Returns the contents of the upstream \c highlights.scm query file shipped with the
-    grammar.  The result is cached after the first call for each language.
-
-    Supported language names: \c "python", \c "java", \c "json", \c "yaml",
-    \c "javascript" (alias: \c "js"), \c "kotlin" (alias: \c "kt"),
-    \c "typescript" (alias: \c "ts"), \c "tsx".
-
-    @param language the language name or alias
-
-    @return the contents of the upstream highlights.scm query file for the given language
-
-    @throw TREESITTER-QUERY-ERROR if the language is not supported or the query file cannot be read
-
-    @par Example: Retrieve and use an upstream highlight query
-    @code{.py}
-%new-style
-%require-types
-%strict-args
-
-%requires treesitter
-
-# Get the bundled upstream highlight query for Python
-string query_text = TreeSitterParser::getHighlightQuery("python");
-
-# Create a query object and run it against parsed source
-TreeSitterParser parser("python");
-TreeSitterTree tree = parser.parse("def hello(): pass");
-TreeSitterQuery query("python", query_text);
-list<hash<auto>> captures = query.captures(tree.getRootNode());
-foreach hash<auto> cap in (captures) {
-    printf("%s: %s (bytes %d-%d)\n", cap.name, cap.node.text,
-        cap.node.start_byte, cap.node.end_byte);
-}
-    @endcode
-
-    @par Example: Use an alias
-    @code{.py}
-# "js" is an alias for "javascript"
-string js_query = TreeSitterParser::getHighlightQuery("js");
-    @endcode
+//! Reset the parser state
+/** Resets the parser to a clean state, clearing any partial parse state from
+    a previous operation. This is useful when switching between documents or
+    when a parse was cancelled.
 
     @since treesitter 1.0
+*/
+nothing TreeSitterParser::reset() {
+    parser->reset();
+}
+
+//! Get the bundled upstream highlight query for a language
+/** @param language the language name or alias
+    @return the highlight query contents
+    @throw TREESITTER-QUERY-ERROR if the language is not supported
+    @see getQuery()
 */
 static string TreeSitterParser::getHighlightQuery(string language) {
     return TreeSitterLanguages::getHighlightQuery(language->c_str(), xsink);
@@ -264,6 +237,146 @@ string injections = TreeSitterParser::getQuery("javascript", "injections");
 */
 static string TreeSitterParser::getQuery(string language, string query_type) [flags=RET_VALUE_ONLY] {
     return TreeSitterLanguages::getQuery(language->c_str(), query_type->c_str(), xsink);
+}
+
+//! Get the number of distinct node types in a language grammar
+/** @param language the language name
+    @return the total number of node type symbols
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+*/
+static int TreeSitterParser::getSymbolCount(string language) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return 0;
+    }
+    return ts_language_symbol_count(lang);
+}
+
+//! Get the name of a node type symbol by its ID
+/** @param language the language name
+    @param symbol the symbol ID
+    @return the symbol name string
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+*/
+static string TreeSitterParser::getSymbolName(string language, int symbol) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return QoreValue();
+    }
+    const char* name = ts_language_symbol_name(lang, static_cast<TSSymbol>(symbol));
+    return name ? new QoreStringNode(name) : new QoreStringNode("");
+}
+
+//! Get the type of a symbol (regular, anonymous, supertype, or auxiliary)
+/** @param language the language name
+    @param symbol the symbol ID
+    @return the symbol type as one of the \c SYMBOL_TYPE_* constants
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+
+    @see SYMBOL_TYPE_REGULAR, SYMBOL_TYPE_ANONYMOUS, SYMBOL_TYPE_SUPERTYPE, SYMBOL_TYPE_AUXILIARY
+*/
+static int TreeSitterParser::getSymbolType(string language, int symbol) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return 0;
+    }
+    return static_cast<int>(ts_language_symbol_type(lang, static_cast<TSSymbol>(symbol)));
+}
+
+//! Get the number of distinct field names in a language grammar
+/** @param language the language name
+    @return the total number of field names
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+*/
+static int TreeSitterParser::getFieldCount(string language) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return 0;
+    }
+    return ts_language_field_count(lang);
+}
+
+//! Get the name of a field by its ID
+/** @param language the language name
+    @param field_id the field ID (1-based; 0 is not a valid field)
+    @return the field name string, or NOTHING if the ID is invalid
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+*/
+static *string TreeSitterParser::getFieldName(string language, int field_id) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return QoreValue();
+    }
+    const char* name = ts_language_field_name_for_id(lang, static_cast<TSFieldId>(field_id));
+    if (!name) {
+        return QoreValue();
+    }
+    return new QoreStringNode(name);
+}
+
+//! Get the field ID for a field name
+/** @param language the language name
+    @param field_name the field name string
+    @return the field ID, or 0 if the field name is not found
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+*/
+static int TreeSitterParser::getFieldId(string language, string field_name) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return 0;
+    }
+    return ts_language_field_id_for_name(lang, field_name->c_str(), field_name->size());
+}
+
+//! Get the list of supertype symbols in a language grammar
+/** @param language the language name
+    @return a list of symbol IDs that are supertypes
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+
+    Supertypes are abstract node types that group multiple concrete types
+    (e.g., "expression" might be a supertype covering "binary_expression",
+    "call_expression", etc.)
+*/
+static list<int> TreeSitterParser::getSupertypes(string language) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return QoreValue();
+    }
+    uint32_t count;
+    const TSSymbol* symbols = ts_language_supertypes(lang, &count);
+    ReferenceHolder<QoreListNode> list(new QoreListNode(bigIntTypeInfo), xsink);
+    for (uint32_t i = 0; i < count; i++) {
+        list->push(static_cast<int64>(symbols[i]), xsink);
+    }
+    return list.release();
+}
+
+//! Get the subtypes of a supertype symbol
+/** @param language the language name
+    @param supertype the supertype symbol ID
+    @return a list of symbol IDs that are subtypes of the given supertype
+    @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
+*/
+static list<int> TreeSitterParser::getSubtypes(string language, int supertype) [flags=RET_VALUE_ONLY] {
+    const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
+    if (!lang) {
+        xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
+        return QoreValue();
+    }
+    uint32_t count;
+    const TSSymbol* symbols = ts_language_subtypes(lang, static_cast<TSSymbol>(supertype), &count);
+    ReferenceHolder<QoreListNode> list(new QoreListNode(bigIntTypeInfo), xsink);
+    for (uint32_t i = 0; i < count; i++) {
+        list->push(static_cast<int64>(symbols[i]), xsink);
+    }
+    return list.release();
 }
 
 //! Set the ranges of text the parser should include when parsing

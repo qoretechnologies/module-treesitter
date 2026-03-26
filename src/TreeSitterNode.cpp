@@ -260,6 +260,52 @@ TreeSitterNode* TreeSitterNode::getNamedDescendantForPointRange(TSPoint start, T
     return new TreeSitterNode(desc, source);
 }
 
+uint32_t TreeSitterNode::getDescendantCount() const {
+    return ts_node_descendant_count(node);
+}
+
+const char* TreeSitterNode::getGrammarType() const {
+    return ts_node_grammar_type(node);
+}
+
+TSSymbol TreeSitterNode::getGrammarSymbol() const {
+    return ts_node_grammar_symbol(node);
+}
+
+TSStateId TreeSitterNode::getParseState() const {
+    return ts_node_parse_state(node);
+}
+
+TSStateId TreeSitterNode::getNextParseState() const {
+    return ts_node_next_parse_state(node);
+}
+
+QoreHashNode* TreeSitterNode::buildNodeInfo(TSNode node, const std::string& src, ExceptionSink* xsink) {
+    uint32_t start = ts_node_start_byte(node);
+    uint32_t end = ts_node_end_byte(node);
+
+    QoreHashNode* node_info = new QoreHashNode(autoTypeInfo);
+    node_info->setKeyValue("type", new QoreStringNode(ts_node_type(node)), xsink);
+    node_info->setKeyValue("start_byte", static_cast<int64>(start), xsink);
+    node_info->setKeyValue("end_byte", static_cast<int64>(end), xsink);
+
+    TSPoint start_point = ts_node_start_point(node);
+    TSPoint end_point = ts_node_end_point(node);
+    node_info->setKeyValue("start_row", static_cast<int64>(start_point.row), xsink);
+    node_info->setKeyValue("start_column", static_cast<int64>(start_point.column), xsink);
+    node_info->setKeyValue("end_row", static_cast<int64>(end_point.row), xsink);
+    node_info->setKeyValue("end_column", static_cast<int64>(end_point.column), xsink);
+
+    if (start < src.size() && end <= src.size()) {
+        node_info->setKeyValue("text",
+            new QoreStringNode(src.substr(start, end - start)), xsink);
+    } else {
+        node_info->setKeyValue("text", new QoreStringNode(""), xsink);
+    }
+
+    return node_info;
+}
+
 bool TreeSitterNode::equals(TreeSitterNode* other) const {
     if (!other) {
         return false;
