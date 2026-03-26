@@ -126,6 +126,43 @@ if(NOT tree-sitter-typescript_POPULATED)
     FetchContent_Populate(tree-sitter-typescript)
 endif()
 
+FetchContent_Declare(
+    tree-sitter-sql
+    GIT_REPOSITORY https://github.com/DerekStride/tree-sitter-sql.git
+    GIT_TAG v0.3.11
+)
+FetchContent_GetProperties(tree-sitter-sql)
+if(NOT tree-sitter-sql_POPULATED)
+    FetchContent_Populate(tree-sitter-sql)
+endif()
+
+# tree-sitter-sql does not ship generated parser.c; generate it if missing
+if(NOT EXISTS "${tree-sitter-sql_SOURCE_DIR}/src/parser.c")
+    find_program(TREE_SITTER_CLI tree-sitter)
+    if(NOT TREE_SITTER_CLI)
+        message(FATAL_ERROR "tree-sitter CLI not found; needed to generate SQL grammar. Install with: npm install -g tree-sitter-cli")
+    endif()
+    message(STATUS "Generating SQL grammar parser.c with ${TREE_SITTER_CLI}")
+    execute_process(
+        COMMAND ${TREE_SITTER_CLI} generate
+        WORKING_DIRECTORY ${tree-sitter-sql_SOURCE_DIR}
+        RESULT_VARIABLE TS_GEN_RESULT
+    )
+    if(NOT TS_GEN_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to generate SQL grammar parser.c")
+    endif()
+endif()
+
+FetchContent_Declare(
+    tree-sitter-markdown
+    GIT_REPOSITORY https://github.com/tree-sitter-grammars/tree-sitter-markdown.git
+    GIT_TAG v0.5.3
+)
+FetchContent_GetProperties(tree-sitter-markdown)
+if(NOT tree-sitter-markdown_POPULATED)
+    FetchContent_Populate(tree-sitter-markdown)
+endif()
+
 # Find the Qore grammar installed by astparser
 find_path(TREE_SITTER_QORE_SRC_DIR
     NAMES parser.c
@@ -164,6 +201,12 @@ add_library(tree-sitter-grammars STATIC
     ${tree-sitter-typescript_SOURCE_DIR}/typescript/src/scanner.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/parser.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/scanner.c
+    ${tree-sitter-sql_SOURCE_DIR}/src/parser.c
+    ${tree-sitter-sql_SOURCE_DIR}/src/scanner.c
+    ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown/src/parser.c
+    ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown/src/scanner.c
+    ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown-inline/src/parser.c
+    ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown-inline/src/scanner.c
     ${TREE_SITTER_QORE_SRC_DIR}/parser.c
 )
 target_include_directories(tree-sitter-grammars PUBLIC
@@ -176,6 +219,9 @@ target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter-kotlin_SOURCE_DIR}/src
     ${tree-sitter-typescript_SOURCE_DIR}/typescript/src
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src
+    ${tree-sitter-sql_SOURCE_DIR}/src
+    ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown/src
+    ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown-inline/src
     ${TREE_SITTER_QORE_SRC_DIR}
 )
 
@@ -252,25 +298,30 @@ endif()
 get_filename_component(QORE_DATA_BASE_DIR "${QORE_METADATA_DIR}" DIRECTORY)
 set(TS_QUERY_INSTALL_DIR "${QORE_DATA_BASE_DIR}/treesitter/queries")
 
-# Define grammar query install targets
-set(TS_GRAMMAR_QUERY_SOURCES
-    "python:${tree-sitter-python_SOURCE_DIR}/queries/highlights.scm"
-    "java:${tree-sitter-java_SOURCE_DIR}/queries/highlights.scm"
-    "json:${tree-sitter-json_SOURCE_DIR}/queries/highlights.scm"
-    "yaml:${tree-sitter-yaml_SOURCE_DIR}/queries/highlights.scm"
-    "javascript:${tree-sitter-javascript_SOURCE_DIR}/queries/highlights.scm"
-    "kotlin:${tree-sitter-kotlin_SOURCE_DIR}/queries/highlights.scm"
-    "typescript:${tree-sitter-typescript_SOURCE_DIR}/queries/highlights.scm"
+# Define grammar query directories - install all .scm files from each
+set(TS_GRAMMAR_QUERY_DIRS
+    "python:${tree-sitter-python_SOURCE_DIR}/queries"
+    "java:${tree-sitter-java_SOURCE_DIR}/queries"
+    "json:${tree-sitter-json_SOURCE_DIR}/queries"
+    "yaml:${tree-sitter-yaml_SOURCE_DIR}/queries"
+    "javascript:${tree-sitter-javascript_SOURCE_DIR}/queries"
+    "kotlin:${tree-sitter-kotlin_SOURCE_DIR}/queries"
+    "typescript:${tree-sitter-typescript_SOURCE_DIR}/queries"
+    "sql:${tree-sitter-sql_SOURCE_DIR}/queries"
+    "markdown:${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown/queries"
 )
 
-foreach(entry ${TS_GRAMMAR_QUERY_SOURCES})
+foreach(entry ${TS_GRAMMAR_QUERY_DIRS})
     string(REPLACE ":" ";" entry_list "${entry}")
     list(GET entry_list 0 lang)
-    list(GET entry_list 1 scm_file)
-    if(EXISTS "${scm_file}")
-        install(FILES "${scm_file}"
-                DESTINATION "${TS_QUERY_INSTALL_DIR}/${lang}"
-                RENAME "highlights.scm")
+    list(GET entry_list 1 query_dir)
+    if(IS_DIRECTORY "${query_dir}")
+        file(GLOB scm_files "${query_dir}/*.scm")
+        foreach(scm_file ${scm_files})
+            get_filename_component(scm_name "${scm_file}" NAME)
+            install(FILES "${scm_file}"
+                    DESTINATION "${TS_QUERY_INSTALL_DIR}/${lang}")
+        endforeach()
     endif()
 endforeach()
 

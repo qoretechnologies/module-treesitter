@@ -92,6 +92,8 @@ static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xs
     TreeSitterNS.addConstant("LANG_YAML", new QoreStringNode("yaml"));
     TreeSitterNS.addConstant("LANG_JAVASCRIPT", new QoreStringNode("javascript"));
     TreeSitterNS.addConstant("LANG_KOTLIN", new QoreStringNode("kotlin"));
+    TreeSitterNS.addConstant("LANG_SQL", new QoreStringNode("sql"));
+    TreeSitterNS.addConstant("LANG_MARKDOWN", new QoreStringNode("markdown"));
     TreeSitterNS.addConstant("LANG_QORE", new QoreStringNode("qore"));
 
 }

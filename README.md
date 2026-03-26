@@ -16,14 +16,20 @@ This module provides bindings to the [tree-sitter](https://tree-sitter.github.io
 - Kotlin
 - TypeScript
 - TSX
+- SQL
+- Markdown
 
 **Note:** The Qore tree-sitter grammar is maintained in the [Qore repository](https://github.com/qoretechnologies/qore) as part of the `astparser` module (`modules/astparser/grammars/tree-sitter-qore/`).
 
 ## Features
 
-- **Incremental parsing**: Efficiently re-parse after edits
+- **Incremental parsing**: Efficiently re-parse after edits with change detection (`hasChanges()`)
 - **Tree cursors**: Memory-efficient tree traversal
 - **Query API**: Pattern matching for syntax highlighting and code analysis
+- **Query predicates**: Automatic evaluation of `#eq?`, `#not-eq?`, `#match?`, `#not-match?`, `#any-of?`, `#not-any-of?`
+- **Range-scoped queries**: Limit query execution to byte or point ranges for viewport-only highlighting
+- **Multi-language support**: `setIncludedRanges()` for parsing embedded languages (e.g., JS in HTML)
+- **Bundled query files**: Access `highlights.scm`, `locals.scm`, `injections.scm`, `folds.scm`, `indents.scm`, and `tags.scm` via `getQuery()`
 - **Thread-safe**: All classes are thread-safe
 ## Building
 
@@ -36,9 +42,10 @@ make install
 
 ## Requirements
 
-- Qore 1.0+
-- CMake 3.15+
-- C++17 compiler
+- Qore 2.0+
+- CMake 3.14+
+- C++11 compiler
+- tree-sitter CLI (`npm install -g tree-sitter-cli`) - needed at build time for SQL grammar generation
 
 ## Example
 

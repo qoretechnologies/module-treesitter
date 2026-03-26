@@ -69,6 +69,14 @@ public:
     //! Get the current timeout
     DLLLOCAL uint64_t getTimeout() const;
 
+    //! Set the ranges of text that the parser should include when parsing
+    /** @param ranges array of TSRange structs
+        @param count number of ranges
+        @param xsink exception sink
+        @return true if ranges were set successfully
+    */
+    DLLLOCAL bool setIncludedRanges(const TSRange* ranges, uint32_t count, ExceptionSink* xsink);
+
     //! Check if parser is valid
     DLLLOCAL bool isValid() const { return parser != nullptr; }
 

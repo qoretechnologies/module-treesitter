@@ -49,7 +49,7 @@ printf("Root type: %s\n", root.getType());
 qclass TreeSitterParser [arg=TreeSitterParser* parser; ns=TreeSitter; vparent=Qore::Serializable];
 
 //! Creates a new TreeSitterParser for the given language
-/** @param language the language to parse (e.g., "python", "java", "json", "yaml", "javascript", "kotlin", "typescript", "tsx", "qore")
+/** @param language the language to parse (e.g., "python", "java", "json", "yaml", "javascript", "kotlin", "typescript", "tsx", "sql", "markdown", "qore")
 
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 
@@ -230,4 +230,96 @@ string js_query = TreeSitterParser::getHighlightQuery("js");
 */
 static string TreeSitterParser::getHighlightQuery(string language) {
     return TreeSitterLanguages::getHighlightQuery(language->c_str(), xsink);
+}
+
+//! Get a bundled query file for a language by query type
+/** Returns the contents of the specified query file shipped with the grammar.
+    The result is cached after the first call for each language/type combination.
+
+    Common query types:
+    - \c "highlights": syntax highlighting patterns
+    - \c "locals": local scope and variable tracking
+    - \c "injections": embedded language regions
+    - \c "tags": symbol tagging for code navigation
+    - \c "folds": foldable code regions
+    - \c "indents": indentation rules
+
+    @param language the language name or alias
+    @param query_type the query type (e.g., "highlights", "locals", "injections", "folds", "indents")
+
+    @return the contents of the query file
+
+    @throw TREESITTER-QUERY-ERROR if the language is not supported or the query file cannot be found
+
+    @par Example:
+    @code{.py}
+# Get the locals query for better variable scope highlighting
+string locals_query = TreeSitterParser::getQuery("javascript", "locals");
+
+# Get injection queries for multi-language documents
+string injections = TreeSitterParser::getQuery("javascript", "injections");
+    @endcode
+
+    @since treesitter 1.0
+*/
+static string TreeSitterParser::getQuery(string language, string query_type) [flags=RET_VALUE_ONLY] {
+    return TreeSitterLanguages::getQuery(language->c_str(), query_type->c_str(), xsink);
+}
+
+//! Set the ranges of text the parser should include when parsing
+/** This enables multi-language document support. When included ranges are set,
+    the parser will only process the text within the specified ranges, treating
+    the rest as if it were whitespace.
+
+    @param ranges a list of range hashes, each with keys:
+    - \c start_byte: the start byte offset
+    - \c end_byte: the end byte offset
+    - \c start_row: the start row (0-indexed)
+    - \c start_column: the start column (0-indexed)
+    - \c end_row: the end row (0-indexed)
+    - \c end_column: the end column (0-indexed)
+
+    @return True on success
+
+    @throw TREESITTER-PARSER-ERROR if the parser is not valid
+
+    @par Example: Parse embedded JavaScript in HTML
+    @code{.py}
+# Parse HTML to find <script> regions
+TreeSitterParser html_parser("javascript");
+# ... find script regions ...
+
+# Parse only the JavaScript portions
+TreeSitterParser js_parser("javascript");
+list<hash<auto>> ranges = (
+    {"start_byte": 50, "end_byte": 120, "start_row": 3, "start_column": 0,
+     "end_row": 8, "end_column": 0},
+);
+js_parser.setIncludedRanges(ranges);
+TreeSitterTree js_tree = js_parser.parse(full_html_source);
+    @endcode
+
+    @since treesitter 1.0
+*/
+bool TreeSitterParser::setIncludedRanges(list<hash<auto>> ranges) {
+    size_t count = ranges->size();
+    if (count == 0) {
+        // Reset to full document
+        return parser->setIncludedRanges(nullptr, 0, xsink);
+    }
+    std::vector<TSRange> ts_ranges(count);
+    ConstListIterator it(ranges);
+    size_t i = 0;
+    while (it.next()) {
+        const QoreHashNode* h = it.getValue().get<QoreHashNode>();
+        TSRange& r = ts_ranges[i];
+        r.start_byte = (uint32_t)h->getKeyValue("start_byte").getAsBigInt();
+        r.end_byte = (uint32_t)h->getKeyValue("end_byte").getAsBigInt();
+        r.start_point.row = (uint32_t)h->getKeyValue("start_row").getAsBigInt();
+        r.start_point.column = (uint32_t)h->getKeyValue("start_column").getAsBigInt();
+        r.end_point.row = (uint32_t)h->getKeyValue("end_row").getAsBigInt();
+        r.end_point.column = (uint32_t)h->getKeyValue("end_column").getAsBigInt();
+        ++i;
+    }
+    return parser->setIncludedRanges(ts_ranges.data(), count, xsink);
 }

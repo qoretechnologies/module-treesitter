@@ -108,7 +108,14 @@ TreeSitterQuery::copy() {
     - \c pattern_index: the index of the matched pattern
     - \c captures: a list of capture hashes with:
       - \c name: the capture name (without @)
-      - \c node: a hash with node information (type, positions)
+      - \c node: a hash with node information (type, positions, text)
+
+    The node hash contains: \c type, \c start_byte, \c end_byte, \c start_row,
+    \c start_column, \c end_row, \c end_column, and \c text.
+
+    @note Query predicates (\c \#eq?, \c \#not-eq?, \c \#match?, \c \#not-match?,
+    \c \#any-of?, \c \#not-any-of?) are automatically evaluated and matches that
+    fail predicates are filtered out.
 
     @par Example:
     @code{.py}
@@ -133,10 +140,17 @@ list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node) {
     @return a list of capture hashes, each containing:
     - \c name: the capture name
     - \c pattern_index: which pattern this capture came from
-    - \c node: a hash with node information
+    - \c node: a hash with node information (type, positions, text)
+
+    The node hash contains: \c type, \c start_byte, \c end_byte, \c start_row,
+    \c start_column, \c end_row, \c end_column, and \c text.
 
     Unlike execute(), this method returns captures in the order they appear
     in the source, which is useful for syntax highlighting.
+
+    @note Query predicates (\c \#eq?, \c \#not-eq?, \c \#match?, \c \#not-match?,
+    \c \#any-of?, \c \#not-any-of?) are automatically evaluated and captures from
+    matches that fail predicates are filtered out.
 
     @par Example:
     @code{.py}
@@ -204,4 +218,80 @@ nothing TreeSitterQuery::disableCapture(string name) {
 */
 nothing TreeSitterQuery::disablePattern(int pattern_index) {
     query->disablePattern(pattern_index);
+}
+
+//! Set the byte range for query execution
+/** @param start_byte the start byte offset (inclusive)
+    @param end_byte the end byte offset (exclusive)
+
+    Restricts query execution to only match nodes that intersect the given byte range.
+    This is essential for performance on large files: only query the visible viewport
+    instead of the entire document.
+
+    @par Example:
+    @code{.py}
+# Only highlight lines in the visible viewport
+TreeSitterQuery query("python", highlight_pattern);
+query.setByteRange(viewport_start_byte, viewport_end_byte);
+list<hash<auto>> captures = query.captures(root);
+    @endcode
+
+    @see clearByteRange()
+*/
+nothing TreeSitterQuery::setByteRange(int start_byte, int end_byte) {
+    query->setByteRange(start_byte, end_byte);
+}
+
+//! Set the point range for query execution
+/** @param start_row the start row (0-indexed, inclusive)
+    @param start_column the start column (0-indexed, inclusive)
+    @param end_row the end row (0-indexed, exclusive)
+    @param end_column the end column (0-indexed, exclusive)
+
+    Restricts query execution to only match nodes that intersect the given
+    row/column range.
+
+    @see clearPointRange()
+*/
+nothing TreeSitterQuery::setPointRange(int start_row, int start_column,
+                                        int end_row, int end_column) {
+    TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
+    TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
+    query->setPointRange(start, end);
+}
+
+//! Clear the byte range restriction
+/** Removes any byte range previously set with setByteRange(), so subsequent
+    queries will match the entire document.
+*/
+nothing TreeSitterQuery::clearByteRange() {
+    query->clearByteRange();
+}
+
+//! Clear the point range restriction
+/** Removes any point range previously set with setPointRange(), so subsequent
+    queries will match the entire document.
+*/
+nothing TreeSitterQuery::clearPointRange() {
+    query->clearPointRange();
+}
+
+//! Set the maximum start depth for query execution
+/** @param max_depth the maximum depth from the root node at which patterns can start
+    matching (0 = only root, 1 = root's direct children, etc.)
+
+    Limits query matching to nodes at most \a max_depth levels deep. This is useful
+    for extracting top-level definitions (e.g., symbol outlines) without matching
+    deeply nested constructs.
+
+    @par Example:
+    @code{.py}
+# Get only top-level function definitions (not nested ones)
+TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+query.setMaxStartDepth(2);  # module -> function_definition
+list<hash<auto>> captures = query.captures(root);
+    @endcode
+*/
+nothing TreeSitterQuery::setMaxStartDepth(int max_depth) {
+    query->setMaxStartDepth(max_depth);
 }

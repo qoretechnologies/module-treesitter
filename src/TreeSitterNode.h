@@ -100,6 +100,12 @@ public:
     //! Check if this node has an error
     DLLLOCAL bool hasError() const;
 
+    //! Check if this node is an ERROR node
+    DLLLOCAL bool isError() const;
+
+    //! Check if this node has been edited
+    DLLLOCAL bool hasChanges() const;
+
     //! Check if this is an "extra" node (e.g., comments)
     DLLLOCAL bool isExtra() const;
 
@@ -108,6 +114,12 @@ public:
 
     //! Get the field name for this node (if it's a field child)
     DLLLOCAL const char* getFieldName() const;
+
+    //! Get the field name for a child at the given index
+    DLLLOCAL const char* getFieldNameForChild(uint32_t child_index) const;
+
+    //! Get the field name for a named child at the given index
+    DLLLOCAL const char* getFieldNameForNamedChild(uint32_t named_child_index) const;
 
     //! Get all children as a vector (caller must wrap in QoreObjects)
     DLLLOCAL std::vector<TreeSitterNode*> getChildren() const;

@@ -268,11 +268,106 @@ bool TreeSitterNode::hasError() {
     return node->hasError();
 }
 
+//! Check if this node is a syntax error node
+/** @return True if this node specifically represents a syntax error (ERROR node)
+
+    Unlike hasError(), which returns True if this node or any descendant contains errors,
+    isError() returns True only if this specific node is an ERROR node inserted by the parser.
+    This is useful for placing error markers at the exact error location.
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def (");
+# Walk the tree to find the exact ERROR node
+TreeSitterCursor cursor = tree.getRootNode().getCursor();
+cursor.gotoFirstChild();
+cursor.gotoFirstChild();
+if (cursor.getCurrentNode().isError()) {
+    printf("Found error node at byte %d\n", cursor.getCurrentNode().getStartByte());
+}
+    @endcode
+*/
+bool TreeSitterNode::isError() [flags=CONSTANT] {
+    return node->isError();
+}
+
+//! Check if this node has been edited via TreeSitterTree::edit()
+/** @return True if this node has been marked as changed by an edit operation
+
+    After calling TreeSitterTree::edit() but before re-parsing with
+    TreeSitterParser::parseIncremental(), this method identifies which nodes were affected
+    by the edit. This enables efficient incremental updates, such as re-highlighting only
+    changed regions.
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("x = 1");
+tree.edit(4, 5, 5, 0, 4, 0, 5, 0, 5);
+assertTrue(tree.getRootNode().hasChanges());
+    @endcode
+*/
+bool TreeSitterNode::hasChanges() [flags=CONSTANT] {
+    return node->hasChanges();
+}
+
 //! Check if this is an "extra" node (like a comment)
 /** @return True if this node is "extra" according to the grammar
 */
 bool TreeSitterNode::isExtra() {
     return node->isExtra();
+}
+
+//! Get the field name for a child at the given index
+/** @param index the child index (0-based, including anonymous children)
+
+    @return the field name (e.g., "name", "body", "parameters"), or NOTHING if the
+    child at the given index does not correspond to a named field
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def foo(x): pass");
+TreeSitterNode func = tree.getRootNode().getNamedChild(0);
+# Iterate children and discover field names
+for (int i = 0; i < func.getChildCount(); i++) {
+    *string field = func.getFieldNameForChild(i);
+    if (exists field) {
+        printf("Child %d is field '%s': %s\n", i, field, func.getChild(i).getType());
+    }
+}
+    @endcode
+*/
+*string TreeSitterNode::getFieldNameForChild(int index) [flags=CONSTANT] {
+    const char* name = node->getFieldNameForChild(index);
+    if (!name) {
+        return QoreValue();
+    }
+    return new QoreStringNode(name);
+}
+
+//! Get the field name for a named child at the given index
+/** @param index the named child index (0-based, excluding anonymous children)
+
+    @return the field name, or NOTHING if the named child at the given index does not
+    correspond to a named field
+
+    @par Example:
+    @code{.py}
+TreeSitterParser parser("python");
+TreeSitterTree tree = parser.parse("def foo(x): pass");
+TreeSitterNode func = tree.getRootNode().getNamedChild(0);
+*string field = func.getFieldNameForNamedChild(0);
+# field == "name" (the function name)
+    @endcode
+*/
+*string TreeSitterNode::getFieldNameForNamedChild(int index) [flags=CONSTANT] {
+    const char* name = node->getFieldNameForNamedChild(index);
+    if (!name) {
+        return QoreValue();
+    }
+    return new QoreStringNode(name);
 }
 
 //! Get all children as a list

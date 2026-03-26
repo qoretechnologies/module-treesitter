@@ -28,7 +28,7 @@ TreeSitterParser::TreeSitterParser(const char* language, ExceptionSink* xsink)
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language);
     if (!lang) {
         raiseTreeSitterException(xsink, "TREESITTER-LANGUAGE-ERROR",
-            "Unknown language: '%s'. Supported languages: python, java, json, yaml, javascript, sql",
+            "Unknown language: '%s'. Use TreeSitterParser::getSupportedLanguages() for a list of supported languages",
             language);
         return;
     }
@@ -100,6 +100,16 @@ TreeSitterTree* TreeSitterParser::parseIncremental(const QoreStringNode* source,
     }
 
     return new TreeSitterTree(tree, std::string(src, len));
+}
+
+bool TreeSitterParser::setIncludedRanges(const TSRange* ranges, uint32_t count, ExceptionSink* xsink) {
+    if (!parser) {
+        raiseTreeSitterException(xsink, "TREESITTER-PARSER-ERROR",
+            "Parser is not valid");
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(mutex);
+    return ts_parser_set_included_ranges(parser, ranges, count);
 }
 
 void TreeSitterParser::setTimeout(uint64_t micros) {

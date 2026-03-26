@@ -69,6 +69,14 @@ public:
     */
     static QoreStringNode* getHighlightQuery(const char* name, ExceptionSink* xsink);
 
+    //! Get a bundled query file for a language by type
+    /** @param name the language name
+        @param query_type the query type (e.g., "highlights", "locals", "injections")
+        @param xsink exception sink for error reporting
+        @return the query string, or nullptr if not found
+    */
+    static QoreStringNode* getQuery(const char* name, const char* query_type, ExceptionSink* xsink);
+
 private:
     static void initLanguages();
     static std::unordered_map<std::string, const TSLanguage*> languages;

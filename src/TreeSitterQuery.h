@@ -28,6 +28,8 @@
 
 #include <string>
 #include <vector>
+#include <regex>
+#include <unordered_map>
 
 //! Wraps a tree-sitter query for pattern matching
 class TreeSitterQuery : public AbstractPrivateData {
@@ -92,10 +94,46 @@ public:
     //! Set the point range for matching
     DLLLOCAL void setPointRange(TSPoint start, TSPoint end);
 
+    //! Set the maximum start depth for query execution
+    DLLLOCAL void setMaxStartDepth(uint32_t depth);
+
+    //! Clear the byte range restriction
+    DLLLOCAL void clearByteRange();
+
+    //! Clear the point range restriction
+    DLLLOCAL void clearPointRange();
+
 private:
     TSQuery* query;
     const TSLanguage* language;
     std::string source;
+
+    // Range restrictions
+    bool has_byte_range = false;
+    uint32_t byte_range_start = 0;
+    uint32_t byte_range_end = 0;
+
+    bool has_point_range = false;
+    TSPoint point_range_start = {0, 0};
+    TSPoint point_range_end = {0, 0};
+
+    bool has_max_start_depth = false;
+    uint32_t max_start_depth = UINT32_MAX;
+
+    // Compiled regex cache for #match? predicates
+    mutable std::unordered_map<std::string, std::regex> regex_cache;
+    mutable std::mutex regex_cache_mutex;
+
+    //! Apply stored cursor settings to a query cursor
+    DLLLOCAL void applyCursorSettings(TSQueryCursor* cursor) const;
+
+    //! Evaluate predicates for a pattern match
+    /** @return true if all predicates pass (match is valid) */
+    DLLLOCAL bool evaluatePredicates(uint32_t pattern_index, const TSQueryMatch& match,
+                                      const std::string& src) const;
+
+    //! Get the text of a node from the source string
+    DLLLOCAL static std::string getNodeText(TSNode node, const std::string& src);
 
     // Prevent copying
     TreeSitterQuery(const TreeSitterQuery&) = delete;

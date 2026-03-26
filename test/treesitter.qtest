@@ -16,6 +16,7 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parser invalid language", \testParserInvalidLanguage());
         addTestCase("Parser timeout", \testParserTimeout());
         addTestCase("Supported languages", \testSupportedLanguages());
+        addTestCase("Parser included ranges", \testParserIncludedRanges());
 
         # Basic parsing tests
         addTestCase("Parse Python", \testParsePython());
@@ -26,6 +27,8 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parse Kotlin", \testParseKotlin());
         addTestCase("Parse TypeScript", \testParseTypeScript());
         addTestCase("Parse TSX", \testParseTsx());
+        addTestCase("Parse SQL", \testParseSQL());
+        addTestCase("Parse Markdown", \testParseMarkdown());
 
         # Tree tests
         addTestCase("Tree root node", \testTreeRootNode());
@@ -44,6 +47,9 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Node parent", \testNodeParent());
         addTestCase("Node siblings", \testNodeSiblings());
         addTestCase("Node properties", \testNodeProperties());
+        addTestCase("Node isError", \testNodeIsError());
+        addTestCase("Node hasChanges", \testNodeHasChanges());
+        addTestCase("Node field name for child", \testNodeFieldNameForChild());
         addTestCase("Node toHash", \testNodeToHash());
         addTestCase("Node toSexp", \testNodeToSexp());
         addTestCase("Node descendant by range", \testNodeDescendantByRange());
@@ -62,6 +68,16 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Query multiple patterns", \testQueryMultiplePatterns());
         addTestCase("Query invalid pattern", \testQueryInvalidPattern());
         addTestCase("Query disable capture", \testQueryDisableCapture());
+        addTestCase("Query capture text", \testQueryCaptureText());
+        addTestCase("Query byte range", \testQueryByteRange());
+        addTestCase("Query point range", \testQueryPointRange());
+        addTestCase("Query max start depth", \testQueryMaxStartDepth());
+        addTestCase("Query predicate eq", \testQueryPredicateEq());
+        addTestCase("Query predicate not-eq", \testQueryPredicateNotEq());
+        addTestCase("Query predicate match", \testQueryPredicateMatch());
+        addTestCase("Query predicate not-match", \testQueryPredicateNotMatch());
+        addTestCase("Query predicate any-of", \testQueryPredicateAnyOf());
+        addTestCase("Query predicate not-any-of", \testQueryPredicateNotAnyOf());
 
         # Incremental parsing tests
         addTestCase("Incremental parsing", \testIncrementalParsing());
@@ -76,6 +92,9 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Highlight query invalid language", \testHighlightQueryInvalid());
         addTestCase("Highlight query creates valid query", \testHighlightQueryParseable());
         addTestCase("Highlight query caching", \testHighlightQueryCaching());
+        addTestCase("Generalized query API", \testGeneralizedQueryAPI());
+        addTestCase("SQL highlight query", \testSQLHighlightQuery());
+        addTestCase("Markdown highlight query", \testMarkdownHighlightQuery());
 
         # Edge cases and corner cases
         addTestCase("Empty source", \testEmptySource());
@@ -108,7 +127,7 @@ class TreeSitterTest inherits QUnit::Test {
 
     testSupportedLanguages() {
         list<string> langs = TreeSitterParser::getSupportedLanguages();
-        assertTrue(langs.size() >= 8);
+        assertTrue(langs.size() >= 11);
         assertTrue(TreeSitterParser::isLanguageSupported("python"));
         assertTrue(TreeSitterParser::isLanguageSupported("java"));
         assertTrue(TreeSitterParser::isLanguageSupported("json"));
@@ -117,8 +136,34 @@ class TreeSitterTest inherits QUnit::Test {
         assertTrue(TreeSitterParser::isLanguageSupported("kotlin"));
         assertTrue(TreeSitterParser::isLanguageSupported("typescript"));
         assertTrue(TreeSitterParser::isLanguageSupported("tsx"));
+        assertTrue(TreeSitterParser::isLanguageSupported("sql"));
+        assertTrue(TreeSitterParser::isLanguageSupported("markdown"));
+        assertTrue(TreeSitterParser::isLanguageSupported("md"));
         assertTrue(TreeSitterParser::isLanguageSupported("qore"));
         assertFalse(TreeSitterParser::isLanguageSupported("nonexistent"));
+    }
+
+    testParserIncludedRanges() {
+        # Test that setIncludedRanges limits parsing to specified ranges
+        TreeSitterParser parser("python");
+        string source = "XXXXXX x = 1 XXXXXX";
+        # Parse only the "x = 1" portion (bytes 7-12)
+        list<hash<auto>> ranges = (
+            {
+                "start_byte": 7, "end_byte": 12,
+                "start_row": 0, "start_column": 7,
+                "end_row": 0, "end_column": 12,
+            },
+        );
+        assertTrue(parser.setIncludedRanges(ranges));
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("module", root.getType());
+        # The parsed region should have meaningful content
+        assertTrue(root.getNamedChildCount() > 0);
+
+        # Reset to full document
+        assertTrue(parser.setIncludedRanges(()));
     }
 
     # Basic parsing tests
@@ -171,6 +216,22 @@ class TreeSitterTest inherits QUnit::Test {
         TreeSitterTree tree = parser.parse("const App = (): JSX.Element => <div>Hello</div>;");
         TreeSitterNode root = tree.getRootNode();
         assertEq("program", root.getType());
+    }
+
+    testParseSQL() {
+        TreeSitterParser parser("sql");
+        TreeSitterTree tree = parser.parse("SELECT id, name FROM users WHERE id = 1");
+        TreeSitterNode root = tree.getRootNode();
+        assertTrue(exists root);
+        assertFalse(root.hasError());
+    }
+
+    testParseMarkdown() {
+        TreeSitterParser parser("markdown");
+        TreeSitterTree tree = parser.parse("# Hello\n\nThis is a paragraph.\n\n- item 1\n- item 2");
+        TreeSitterNode root = tree.getRootNode();
+        assertTrue(exists root);
+        assertFalse(root.hasError());
     }
 
     # Tree tests
@@ -304,6 +365,81 @@ class TreeSitterTest inherits QUnit::Test {
         assertTrue(root.isNamed());
         assertFalse(root.isMissing());
         assertFalse(root.hasError());
+    }
+
+    testNodeIsError() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def (");
+        TreeSitterNode root = tree.getRootNode();
+        assertTrue(root.hasError());
+
+        # Walk to find an ERROR node
+        bool found_error = False;
+        TreeSitterCursor cursor = root.getCursor();
+        cursor.gotoFirstChild();
+        do {
+            TreeSitterNode node = cursor.getCurrentNode();
+            if (node.isError()) {
+                found_error = True;
+                break;
+            }
+            # Check children
+            if (cursor.gotoFirstChild()) {
+                do {
+                    if (cursor.getCurrentNode().isError()) {
+                        found_error = True;
+                        break;
+                    }
+                } while (cursor.gotoNextSibling());
+                if (found_error) {
+                    break;
+                }
+                cursor.gotoParent();
+            }
+        } while (cursor.gotoNextSibling());
+        assertTrue(found_error, "should find an ERROR node in broken syntax");
+
+        # Normal code should not have error nodes
+        TreeSitterTree good_tree = parser.parse("x = 1");
+        assertFalse(good_tree.getRootNode().isError());
+    }
+
+    testNodeHasChanges() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("x = 1");
+        # Before edit, root should not have changes
+        assertFalse(tree.getRootNode().hasChanges());
+
+        # After edit, root should have changes
+        tree.edit(4, 5, 5, 0, 4, 0, 5, 0, 5);
+        assertTrue(tree.getRootNode().hasChanges());
+    }
+
+    testNodeFieldNameForChild() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(x): pass");
+        TreeSitterNode func = tree.getRootNode().getNamedChild(0);
+        assertEq("function_definition", func.getType());
+
+        # getFieldNameForNamedChild: first named child should be "name"
+        *string field0 = func.getFieldNameForNamedChild(0);
+        assertEq("name", field0);
+
+        # Find the "body" field
+        bool found_body = False;
+        for (int i = 0; i < func.getNamedChildCount(); i++) {
+            *string field = func.getFieldNameForNamedChild(i);
+            if (field == "body") {
+                found_body = True;
+                break;
+            }
+        }
+        assertTrue(found_body, "should find 'body' field in function_definition");
+
+        # getFieldNameForChild: some children (like keywords) have no field name
+        # The "def" keyword is the first child (anonymous), should return NOTHING
+        *string kw_field = func.getFieldNameForChild(0);
+        assertNothing(kw_field);
     }
 
     testNodeToHash() {
@@ -482,6 +618,247 @@ class TreeSitterTest inherits QUnit::Test {
         }
     }
 
+    testQueryCaptureText() {
+        # Verify that captures include the node text
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("def foo(): pass\ndef bar(): pass");
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+        list<hash<auto>> captures = query.captures(root);
+
+        list<string> func_names = ();
+        foreach hash<auto> cap in (captures) {
+            assertTrue(exists cap.node.text, "capture node should have text field");
+            if (cap.name == "name") {
+                func_names += cap.node.text;
+            }
+        }
+        assertEq(("foo", "bar"), func_names);
+
+        # Also verify execute() returns text
+        list<hash<auto>> matches = query.execute(root);
+        assertEq(2, matches.size());
+        foreach hash<auto> match in (matches) {
+            foreach hash<auto> cap in (match.captures) {
+                assertTrue(exists cap.node.text, "execute() capture should have text");
+            }
+        }
+    }
+
+    testQueryByteRange() {
+        TreeSitterParser parser("python");
+        # Two functions: "def foo(): pass\ndef bar(): pass"
+        string source = "def foo(): pass\ndef bar(): pass";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name) @func");
+
+        # Restrict to only the first line (bytes 0-15)
+        query.setByteRange(0, 16);
+        list<hash<auto>> captures = query.captures(root);
+        list<string> names = ();
+        foreach hash<auto> cap in (captures) {
+            if (cap.name == "name") {
+                names += cap.node.text;
+            }
+        }
+        assertEq(1, names.size(), "byte range should limit to first function");
+        assertEq("foo", names[0]);
+
+        # Clear range and verify both match again
+        query.clearByteRange();
+        captures = query.captures(root);
+        names = ();
+        foreach hash<auto> cap in (captures) {
+            if (cap.name == "name") {
+                names += cap.node.text;
+            }
+        }
+        assertEq(2, names.size(), "after clearing byte range, both functions should match");
+    }
+
+    testQueryPointRange() {
+        TreeSitterParser parser("python");
+        string source = "def foo(): pass\ndef bar(): pass";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name)");
+
+        # Restrict to second line only (row 1)
+        query.setPointRange(1, 0, 2, 0);
+        list<hash<auto>> captures = query.captures(root);
+        list<string> names = ();
+        foreach hash<auto> cap in (captures) {
+            if (cap.name == "name") {
+                names += cap.node.text;
+            }
+        }
+        assertEq(1, names.size(), "point range should limit to second line");
+        assertEq("bar", names[0]);
+
+        # Clear and verify both match
+        query.clearPointRange();
+        captures = query.captures(root);
+        names = ();
+        foreach hash<auto> cap in (captures) {
+            if (cap.name == "name") {
+                names += cap.node.text;
+            }
+        }
+        assertEq(2, names.size());
+    }
+
+    testQueryMaxStartDepth() {
+        TreeSitterParser parser("python");
+        # Nested function: inner should not match at depth 1
+        string source = "def outer():\n    def inner():\n        pass";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        # Without depth limit, both functions match
+        TreeSitterQuery query1("python", "(function_definition name: (identifier) @name)");
+        list<hash<auto>> captures = query1.captures(root);
+        list<string> all_names = ();
+        foreach hash<auto> cap in (captures) {
+            if (cap.name == "name") {
+                all_names += cap.node.text;
+            }
+        }
+        assertEq(2, all_names.size(), "without depth limit, both functions should match");
+
+        # With depth limit = 2 (module=0, function_definition=1), only outer matches
+        TreeSitterQuery query2("python", "(function_definition name: (identifier) @name)");
+        query2.setMaxStartDepth(2);
+        captures = query2.captures(root);
+        list<string> limited_names = ();
+        foreach hash<auto> cap in (captures) {
+            if (cap.name == "name") {
+                limited_names += cap.node.text;
+            }
+        }
+        assertEq(1, limited_names.size(), "with depth limit, only top-level function should match");
+        assertEq("outer", limited_names[0]);
+    }
+
+    testQueryPredicateEq() {
+        TreeSitterParser parser("python");
+        # Two identifiers: "foo" and "bar"
+        string source = "foo = 1\nbar = 2";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        # Match only identifiers that equal "foo"
+        TreeSitterQuery query("python", '((identifier) @id (#eq? @id "foo"))');
+        list<hash<auto>> captures = query.captures(root);
+        assertEq(1, captures.size(), "#eq? should filter to only 'foo'");
+        assertEq("foo", captures[0].node.text);
+    }
+
+    testQueryPredicateNotEq() {
+        TreeSitterParser parser("python");
+        string source = "foo = 1\nbar = 2";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        # Match identifiers that do NOT equal "foo"
+        TreeSitterQuery query("python", '((identifier) @id (#not-eq? @id "foo"))');
+        list<hash<auto>> captures = query.captures(root);
+        # Should match "bar" but not "foo"
+        bool found_bar = False;
+        bool found_foo = False;
+        foreach hash<auto> cap in (captures) {
+            if (cap.node.text == "bar") {
+                found_bar = True;
+            }
+            if (cap.node.text == "foo") {
+                found_foo = True;
+            }
+        }
+        assertTrue(found_bar, "#not-eq? should include 'bar'");
+        assertFalse(found_foo, "#not-eq? should exclude 'foo'");
+    }
+
+    testQueryPredicateMatch() {
+        TreeSitterParser parser("python");
+        # Identifiers: "_private", "public_func", "__dunder__"
+        string source = "_private = 1\npublic_func = 2\n__dunder__ = 3";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        # Match only identifiers starting with underscore
+        TreeSitterQuery query("python", '((identifier) @id (#match? @id "^_"))');
+        list<hash<auto>> captures = query.captures(root);
+        foreach hash<auto> cap in (captures) {
+            assertTrue(cap.node.text =~ /^_/, sprintf("#match? filtered id '%s' should start with _", cap.node.text));
+        }
+        assertTrue(captures.size() >= 2, "should match _private and __dunder__");
+    }
+
+    testQueryPredicateNotMatch() {
+        TreeSitterParser parser("python");
+        string source = "_private = 1\npublic_func = 2\n__dunder__ = 3";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        # Match identifiers NOT starting with underscore
+        TreeSitterQuery query("python", '((identifier) @id (#not-match? @id "^_"))');
+        list<hash<auto>> captures = query.captures(root);
+        foreach hash<auto> cap in (captures) {
+            assertFalse(cap.node.text =~ /^_/,
+                sprintf("#not-match? should exclude ids starting with _, got '%s'", cap.node.text));
+        }
+        # Should include "public_func" but not "_private" or "__dunder__"
+        bool found_public = False;
+        foreach hash<auto> cap in (captures) {
+            if (cap.node.text == "public_func") {
+                found_public = True;
+            }
+        }
+        assertTrue(found_public, "#not-match? should include 'public_func'");
+    }
+
+    testQueryPredicateAnyOf() {
+        TreeSitterParser parser("python");
+        string source = "alpha = 1\nbeta = 2\ngamma = 3";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        # Match identifiers that are one of "alpha" or "gamma"
+        TreeSitterQuery query("python", '((identifier) @id (#any-of? @id "alpha" "gamma"))');
+        list<hash<auto>> captures = query.captures(root);
+        foreach hash<auto> cap in (captures) {
+            assertTrue(cap.node.text == "alpha" || cap.node.text == "gamma",
+                sprintf("#any-of? should only match alpha/gamma, got '%s'", cap.node.text));
+        }
+        assertEq(2, captures.size(), "should match alpha and gamma");
+    }
+
+    testQueryPredicateNotAnyOf() {
+        TreeSitterParser parser("python");
+        string source = "alpha = 1\nbeta = 2\ngamma = 3";
+        TreeSitterTree tree = parser.parse(source);
+        TreeSitterNode root = tree.getRootNode();
+
+        # Match identifiers that are NOT "alpha" or "gamma"
+        TreeSitterQuery query("python", '((identifier) @id (#not-any-of? @id "alpha" "gamma"))');
+        list<hash<auto>> captures = query.captures(root);
+        foreach hash<auto> cap in (captures) {
+            assertNeq("alpha", cap.node.text);
+            assertNeq("gamma", cap.node.text);
+        }
+        # Should contain "beta" (and nothing else that's alpha/gamma)
+        bool found_beta = False;
+        foreach hash<auto> cap in (captures) {
+            if (cap.node.text == "beta") {
+                found_beta = True;
+            }
+        }
+        assertTrue(found_beta, "#not-any-of? should include 'beta'");
+    }
+
     # Incremental parsing tests
     testIncrementalParsing() {
         TreeSitterParser parser("python");
@@ -520,7 +897,7 @@ class TreeSitterTest inherits QUnit::Test {
     # Highlight query tests
     testHighlightQueryValidLanguages() {
         # Every language in the query_lang_map should return a non-empty string
-        list<string> langs = ("python", "java", "json", "yaml", "javascript", "kotlin", "typescript");
+        list<string> langs = ("python", "java", "json", "yaml", "javascript", "kotlin", "typescript", "sql", "markdown");
         foreach string lang in (langs) {
             string query = TreeSitterParser::getHighlightQuery(lang);
             assertTrue(query.length() > 0, sprintf("query for %s should be non-empty", lang));
@@ -572,6 +949,8 @@ class TreeSitterTest inherits QUnit::Test {
             "javascript": "javascript",
             "kotlin": "kotlin",
             "typescript": "typescript",
+            "sql": "sql",
+            "markdown": "markdown",
         };
 
         foreach hash<auto> entry in (lang_parser_map.pairIterator()) {
@@ -594,6 +973,78 @@ class TreeSitterTest inherits QUnit::Test {
         string q1 = TreeSitterParser::getHighlightQuery("python");
         string q2 = TreeSitterParser::getHighlightQuery("python");
         assertEq(q1, q2, "cached query should be identical");
+    }
+
+    testGeneralizedQueryAPI() {
+        # Test getQuery() with different query types
+        # JavaScript has locals.scm
+        string locals = TreeSitterParser::getQuery("javascript", "locals");
+        assertTrue(locals.length() > 0, "javascript locals query should be non-empty");
+
+        # JavaScript has injections.scm
+        string injections = TreeSitterParser::getQuery("javascript", "injections");
+        assertTrue(injections.length() > 0, "javascript injections query should be non-empty");
+
+        # getHighlightQuery should return the same as getQuery with "highlights"
+        string hl1 = TreeSitterParser::getHighlightQuery("python");
+        string hl2 = TreeSitterParser::getQuery("python", "highlights");
+        assertEq(hl1, hl2, "getHighlightQuery and getQuery('highlights') should match");
+
+        # Nonexistent query type should throw
+        assertThrows("TREESITTER-QUERY-ERROR", \TreeSitterParser::getQuery(), ("python", "nonexistent_type"));
+
+        # Nonexistent language should throw
+        assertThrows("TREESITTER-QUERY-ERROR", \TreeSitterParser::getQuery(), ("nonexistent", "highlights"));
+
+        # SQL has indents.scm
+        string indents = TreeSitterParser::getQuery("sql", "indents");
+        assertTrue(indents.length() > 0, "sql indents query should be non-empty");
+
+        # Markdown has injections.scm
+        string md_inj = TreeSitterParser::getQuery("markdown", "injections");
+        assertTrue(md_inj.length() > 0, "markdown injections query should be non-empty");
+
+        # Aliases should work
+        string md_hl = TreeSitterParser::getQuery("md", "highlights");
+        string markdown_hl = TreeSitterParser::getQuery("markdown", "highlights");
+        assertEq(md_hl, markdown_hl, "md and markdown aliases should return same query");
+    }
+
+    testSQLHighlightQuery() {
+        string query_text = TreeSitterParser::getHighlightQuery("sql");
+        assertTrue(query_text.length() > 0, "SQL highlight query should be non-empty");
+        assertTrue(query_text.find("@") >= 0, "SQL highlight query should contain captures");
+
+        # Parse and run the query
+        try {
+            TreeSitterQuery query("sql", query_text);
+            assertTrue(query.getPatternCount() > 0, "SQL highlight query should have patterns");
+
+            # Run against actual SQL
+            TreeSitterParser parser("sql");
+            TreeSitterTree tree = parser.parse("SELECT id, name FROM users WHERE id = 1");
+            list<hash<auto>> captures = query.captures(tree.getRootNode());
+            assertTrue(captures.size() > 0, "SQL highlight query should produce captures");
+        } catch (hash<ExceptionInfo> ex) {
+            assertEq("TREESITTER-QUERY-ERROR", ex.err);
+        }
+    }
+
+    testMarkdownHighlightQuery() {
+        string query_text = TreeSitterParser::getHighlightQuery("markdown");
+        assertTrue(query_text.length() > 0, "Markdown highlight query should be non-empty");
+
+        try {
+            TreeSitterQuery query("markdown", query_text);
+            assertTrue(query.getPatternCount() > 0, "Markdown highlight query should have patterns");
+
+            TreeSitterParser parser("markdown");
+            TreeSitterTree tree = parser.parse("# Hello\n\n**bold** text");
+            list<hash<auto>> captures = query.captures(tree.getRootNode());
+            assertTrue(captures.size() > 0, "Markdown highlight query should produce captures");
+        } catch (hash<ExceptionInfo> ex) {
+            assertEq("TREESITTER-QUERY-ERROR", ex.err);
+        }
     }
 
     # Edge cases and corner cases

@@ -147,6 +147,14 @@ bool TreeSitterNode::hasError() const {
     return ts_node_has_error(node);
 }
 
+bool TreeSitterNode::isError() const {
+    return ts_node_is_error(node);
+}
+
+bool TreeSitterNode::hasChanges() const {
+    return ts_node_has_changes(node);
+}
+
 bool TreeSitterNode::isExtra() const {
     return ts_node_is_extra(node);
 }
@@ -159,6 +167,14 @@ const char* TreeSitterNode::getFieldName() const {
     // This is only valid when the node was retrieved via a parent
     // In tree-sitter, this is context-dependent, so we return nullptr
     return nullptr;
+}
+
+const char* TreeSitterNode::getFieldNameForChild(uint32_t child_index) const {
+    return ts_node_field_name_for_child(node, child_index);
+}
+
+const char* TreeSitterNode::getFieldNameForNamedChild(uint32_t named_child_index) const {
+    return ts_node_field_name_for_named_child(node, named_child_index);
 }
 
 std::vector<TreeSitterNode*> TreeSitterNode::getChildren() const {
