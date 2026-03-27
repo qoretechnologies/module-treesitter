@@ -138,16 +138,28 @@ endif()
 
 # tree-sitter-sql does not ship generated parser.c; generate it if missing
 if(NOT EXISTS "${tree-sitter-sql_SOURCE_DIR}/src/parser.c")
+    # Prefer npx so the correct tree-sitter-cli version is used (as specified in
+    # the grammar's package.json), avoiding GLIBC version mismatches with the
+    # globally installed binary.
+    find_program(NPX_CMD npx)
     find_program(TREE_SITTER_CLI tree-sitter)
-    if(NOT TREE_SITTER_CLI)
-        message(FATAL_ERROR "tree-sitter CLI not found; needed to generate SQL grammar. Install with: npm install -g tree-sitter-cli")
+    if(NPX_CMD)
+        message(STATUS "Generating SQL grammar parser.c with npx tree-sitter-cli@v0.24.7")
+        execute_process(
+            COMMAND ${NPX_CMD} --yes --package=tree-sitter-cli@v0.24.7 -- tree-sitter generate
+            WORKING_DIRECTORY ${tree-sitter-sql_SOURCE_DIR}
+            RESULT_VARIABLE TS_GEN_RESULT
+        )
+    elseif(TREE_SITTER_CLI)
+        message(STATUS "Generating SQL grammar parser.c with ${TREE_SITTER_CLI}")
+        execute_process(
+            COMMAND ${TREE_SITTER_CLI} generate
+            WORKING_DIRECTORY ${tree-sitter-sql_SOURCE_DIR}
+            RESULT_VARIABLE TS_GEN_RESULT
+        )
+    else()
+        message(FATAL_ERROR "Neither npx nor tree-sitter CLI found; needed to generate SQL grammar. Install with: npm install -g tree-sitter-cli")
     endif()
-    message(STATUS "Generating SQL grammar parser.c with ${TREE_SITTER_CLI}")
-    execute_process(
-        COMMAND ${TREE_SITTER_CLI} generate
-        WORKING_DIRECTORY ${tree-sitter-sql_SOURCE_DIR}
-        RESULT_VARIABLE TS_GEN_RESULT
-    )
     if(NOT TS_GEN_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to generate SQL grammar parser.c")
     endif()
