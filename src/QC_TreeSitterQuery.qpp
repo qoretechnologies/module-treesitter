@@ -74,7 +74,7 @@ TreeSitterQuery query("python", "(call function: (identifier) @func_name) @call"
 TreeSitterQuery query("python", "(import_statement) @import");
     @endcode
 */
-TreeSitterQuery::constructor(string language, string pattern) {
+TreeSitterQuery::constructor(string language, string pattern) [flags=NAMED_ARGS] {
     ReferenceHolder<TreeSitterQuery> holder(
         new TreeSitterQuery(language->c_str(), pattern->c_str(), xsink), xsink);
     if (*xsink) {
@@ -194,7 +194,7 @@ int TreeSitterQuery::getCaptureCount() {
 
     @return the capture name (without @)
 */
-*string TreeSitterQuery::getCaptureName(int index) {
+*string TreeSitterQuery::getCaptureName(int index) [flags=NAMED_ARGS] {
     const char* name = query->getCaptureName(index);
     if (!name) {
         return QoreValue();
@@ -207,7 +207,7 @@ int TreeSitterQuery::getCaptureCount() {
 
     Disabled captures will not be included in query results.
 */
-nothing TreeSitterQuery::disableCapture(string name) {
+nothing TreeSitterQuery::disableCapture(string name) [flags=NAMED_ARGS] {
     query->disableCapture(name->c_str());
 }
 
@@ -216,7 +216,7 @@ nothing TreeSitterQuery::disableCapture(string name) {
 
     Disabled patterns will not be matched during query execution.
 */
-nothing TreeSitterQuery::disablePattern(int pattern_index) {
+nothing TreeSitterQuery::disablePattern(int pattern_index) [flags=NAMED_ARGS] {
     query->disablePattern(pattern_index);
 }
 
@@ -238,7 +238,7 @@ list<hash<auto>> captures = query.captures(root);
 
     @see clearByteRange()
 */
-nothing TreeSitterQuery::setByteRange(int start_byte, int end_byte) {
+nothing TreeSitterQuery::setByteRange(int start_byte, int end_byte) [flags=NAMED_ARGS] {
     query->setByteRange(start_byte, end_byte);
 }
 
@@ -254,7 +254,7 @@ nothing TreeSitterQuery::setByteRange(int start_byte, int end_byte) {
     @see clearPointRange()
 */
 nothing TreeSitterQuery::setPointRange(int start_row, int start_column,
-                                        int end_row, int end_column) {
+                                        int end_row, int end_column) [flags=NAMED_ARGS] {
     TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
     TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
     query->setPointRange(start, end);
@@ -292,7 +292,7 @@ query.setMaxStartDepth(2);  # module -> function_definition
 list<hash<auto>> captures = query.captures(root);
     @endcode
 */
-nothing TreeSitterQuery::setMaxStartDepth(int max_depth) {
+nothing TreeSitterQuery::setMaxStartDepth(int max_depth) [flags=NAMED_ARGS] {
     query->setMaxStartDepth(max_depth);
 }
 
@@ -315,7 +315,7 @@ hash<auto> metadata = TreeSitterQuery::resolveLocals("javascript", root);
 list<hash<auto>> matches = query.execute(root, metadata);
     @endcode
 */
-list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node, *hash<auto> metadata) {
+list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node, *hash<auto> metadata) [flags=NAMED_ARGS] {
     return query->execute(*node, xsink, metadata);
 }
 
@@ -325,7 +325,7 @@ list<hash<auto>> TreeSitterQuery::execute(TreeSitterNode[TreeSitterNode] node, *
 
     @return a list of capture hashes (same format as captures())
 */
-list<hash<auto>> TreeSitterQuery::captures(TreeSitterNode[TreeSitterNode] node, *hash<auto> metadata) {
+list<hash<auto>> TreeSitterQuery::captures(TreeSitterNode[TreeSitterNode] node, *hash<auto> metadata) [flags=NAMED_ARGS] {
     return query->captures(*node, xsink, metadata);
 }
 
@@ -357,7 +357,7 @@ list<hash<auto>> captures = query.captures(root, metadata);
 
     @since treesitter 1.0
 */
-static *hash<auto> TreeSitterQuery::resolveLocals(string language, TreeSitterNode[TreeSitterNode] node) [flags=RET_VALUE_ONLY] {
+static *hash<auto> TreeSitterQuery::resolveLocals(string language, TreeSitterNode[TreeSitterNode] node) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     QoreHashNode* result = TreeSitterQuery::resolveLocals(language->c_str(), *node, xsink);
     if (!result) {
         return QoreValue();

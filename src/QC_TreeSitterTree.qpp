@@ -108,7 +108,7 @@ tree.edit(4, 7, 7, 0, 4, 0, 7, 0, 7);
 nothing TreeSitterTree::edit(int start_byte, int old_end_byte, int new_end_byte,
                               int start_row, int start_column,
                               int old_end_row, int old_end_column,
-                              int new_end_row, int new_end_column) {
+                              int new_end_row, int new_end_column) [flags=NAMED_ARGS] {
     tree->edit(start_byte, old_end_byte, new_end_byte,
                start_row, start_column,
                old_end_row, old_end_column,
@@ -134,6 +134,6 @@ foreach hash<auto> range in (changes) {
 }
     @endcode
 */
-list<hash<auto>> TreeSitterTree::getChangedRanges(TreeSitterTree[TreeSitterTree] other) {
+list<hash<auto>> TreeSitterTree::getChangedRanges(TreeSitterTree[TreeSitterTree] other) [flags=NAMED_ARGS] {
     return tree->getChangedRanges(*other, xsink);
 }
