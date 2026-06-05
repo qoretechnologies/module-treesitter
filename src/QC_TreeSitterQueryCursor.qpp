@@ -56,7 +56,7 @@ qclass TreeSitterQueryCursor [arg=TreeSitterQueryCursor* qcursor; ns=TreeSitter;
 //! Create a query cursor from a query
 /** @param query the query to execute with this cursor
 */
-TreeSitterQueryCursor::constructor(TreeSitterQuery[TreeSitterQuery] query) {
+TreeSitterQueryCursor::constructor(TreeSitterQuery[TreeSitterQuery] query) [flags=NAMED_ARGS] {
     self->setPrivate(CID_TREESITTERQUERYCURSOR, new TreeSitterQueryCursor(*query));
 }
 
@@ -81,7 +81,7 @@ TreeSitterQueryCursor::copy() {
     Resets the cursor and begins a new query execution. Call nextMatch() or
     nextCapture() to iterate results.
 */
-nothing TreeSitterQueryCursor::exec(TreeSitterNode[TreeSitterNode] node) {
+nothing TreeSitterQueryCursor::exec(TreeSitterNode[TreeSitterNode] node) [flags=NAMED_ARGS] {
     qcursor->exec(*node);
 }
 
@@ -140,7 +140,7 @@ while (*hash<auto> cap = qcursor.nextCapture()) {
 
     @see TreeSitterQuery::setByteRange()
 */
-nothing TreeSitterQueryCursor::setByteRange(int start_byte, int end_byte) {
+nothing TreeSitterQueryCursor::setByteRange(int start_byte, int end_byte) [flags=NAMED_ARGS] {
     qcursor->setByteRange(start_byte, end_byte);
 }
 
@@ -151,7 +151,7 @@ nothing TreeSitterQueryCursor::setByteRange(int start_byte, int end_byte) {
     @param end_column the end column (0-indexed)
 */
 nothing TreeSitterQueryCursor::setPointRange(int start_row, int start_column,
-                                              int end_row, int end_column) {
+                                              int end_row, int end_column) [flags=NAMED_ARGS] {
     TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
     TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
     qcursor->setPointRange(start, end);
@@ -174,7 +174,7 @@ nothing TreeSitterQueryCursor::clearPointRange() {
 //! Set the maximum start depth for query execution
 /** @param max_depth the maximum depth
 */
-nothing TreeSitterQueryCursor::setMaxStartDepth(int max_depth) {
+nothing TreeSitterQueryCursor::setMaxStartDepth(int max_depth) [flags=NAMED_ARGS] {
     qcursor->setMaxStartDepth(max_depth);
 }
 
@@ -184,7 +184,7 @@ nothing TreeSitterQueryCursor::setMaxStartDepth(int max_depth) {
     If the match limit is exceeded during query execution, some matches may be
     dropped. Check didExceedMatchLimit() after iteration to detect this.
 */
-nothing TreeSitterQueryCursor::setMatchLimit(int limit) {
+nothing TreeSitterQueryCursor::setMatchLimit(int limit) [flags=NAMED_ARGS] {
     qcursor->setMatchLimit(limit);
 }
 

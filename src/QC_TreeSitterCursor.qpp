@@ -46,7 +46,7 @@ qclass TreeSitterCursor [arg=TreeSitterCursor* cursor; ns=TreeSitter; vparent=Qo
 //! Create a cursor starting at the given node
 /** @param node the starting node for the cursor
 */
-TreeSitterCursor::constructor(TreeSitterNode[TreeSitterNode] node) {
+TreeSitterCursor::constructor(TreeSitterNode[TreeSitterNode] node) [flags=NAMED_ARGS] {
     self->setPrivate(CID_TREESITTERCURSOR, new TreeSitterCursor(*node));
 }
 
@@ -68,7 +68,7 @@ TreeSitterCursor::copy() {
 //! Reset the cursor to a new starting node
 /** @param node the new starting node
 */
-nothing TreeSitterCursor::reset(TreeSitterNode[TreeSitterNode] node) {
+nothing TreeSitterCursor::reset(TreeSitterNode[TreeSitterNode] node) [flags=NAMED_ARGS] {
     cursor->reset(*node);
 }
 
@@ -136,7 +136,7 @@ bool TreeSitterCursor::gotoLastChild() {
 
     This is useful for finding the node at a particular position in the source.
 */
-int TreeSitterCursor::gotoFirstChildForByte(int byte_offset) {
+int TreeSitterCursor::gotoFirstChildForByte(int byte_offset) [flags=NAMED_ARGS] {
     return cursor->gotoFirstChildForByte(byte_offset);
 }
 
@@ -146,7 +146,7 @@ int TreeSitterCursor::gotoFirstChildForByte(int byte_offset) {
 
     @return the index of the child if found, or -1 if not found
 */
-int TreeSitterCursor::gotoFirstChildForPoint(int row, int column) {
+int TreeSitterCursor::gotoFirstChildForPoint(int row, int column) [flags=NAMED_ARGS] {
     TSPoint point = {static_cast<uint32_t>(row), static_cast<uint32_t>(column)};
     return cursor->gotoFirstChildForPoint(point);
 }

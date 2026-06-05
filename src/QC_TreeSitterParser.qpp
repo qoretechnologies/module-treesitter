@@ -58,7 +58,7 @@ qclass TreeSitterParser [arg=TreeSitterParser* parser; ns=TreeSitter; vparent=Qo
 TreeSitterParser parser("python");
     @endcode
 */
-TreeSitterParser::constructor(string language) {
+TreeSitterParser::constructor(string language) [flags=NAMED_ARGS] {
     ReferenceHolder<TreeSitterParser> holder(new TreeSitterParser(language->c_str(), xsink), xsink);
     if (*xsink) {
         return;
@@ -102,7 +102,7 @@ TreeSitterParser parser("python");
 TreeSitterTree tree = parser.parse("def foo(): return 42");
     @endcode
 */
-TreeSitterTree TreeSitterParser::parse(string source) {
+TreeSitterTree TreeSitterParser::parse(string source) [flags=NAMED_ARGS] {
     TreeSitterTree* tree = parser->parse(source, xsink);
     if (*xsink || !tree) {
         return QoreValue();
@@ -130,7 +130,7 @@ tree1.edit(0, 3, 3, 0, 0, 0, 3, 0, 3);
 TreeSitterTree tree2 = parser.parseIncremental("def bar(): return 42", tree1);
     @endcode
 */
-TreeSitterTree TreeSitterParser::parseIncremental(string source, TreeSitterTree[TreeSitterTree] old_tree) {
+TreeSitterTree TreeSitterParser::parseIncremental(string source, TreeSitterTree[TreeSitterTree] old_tree) [flags=NAMED_ARGS] {
     TreeSitterTree* tree = parser->parseIncremental(source, *old_tree, xsink);
     if (*xsink || !tree) {
         return QoreValue();
@@ -151,7 +151,7 @@ string TreeSitterParser::getLanguage() {
     If parsing takes longer than the timeout, the parser will stop and return
     a partial tree or raise an error.
 */
-nothing TreeSitterParser::setTimeout(int timeout_micros) {
+nothing TreeSitterParser::setTimeout(int timeout_micros) [flags=NAMED_ARGS] {
     parser->setTimeout(timeout_micros);
 }
 
@@ -180,7 +180,7 @@ static list<string> TreeSitterParser::getSupportedLanguages() {
 
     @return True if the language is supported, False otherwise
 */
-static bool TreeSitterParser::isLanguageSupported(string language) {
+static bool TreeSitterParser::isLanguageSupported(string language) [flags=NAMED_ARGS] {
     return TreeSitterLanguages::isLanguageSupported(language->c_str());
 }
 
@@ -201,7 +201,7 @@ nothing TreeSitterParser::reset() {
     @throw TREESITTER-QUERY-ERROR if the language is not supported
     @see getQuery()
 */
-static string TreeSitterParser::getHighlightQuery(string language) {
+static string TreeSitterParser::getHighlightQuery(string language) [flags=NAMED_ARGS] {
     return TreeSitterLanguages::getHighlightQuery(language->c_str(), xsink);
 }
 
@@ -235,7 +235,7 @@ string injections = TreeSitterParser::getQuery("javascript", "injections");
 
     @since treesitter 1.0
 */
-static string TreeSitterParser::getQuery(string language, string query_type) [flags=RET_VALUE_ONLY] {
+static string TreeSitterParser::getQuery(string language, string query_type) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     return TreeSitterLanguages::getQuery(language->c_str(), query_type->c_str(), xsink);
 }
 
@@ -244,7 +244,7 @@ static string TreeSitterParser::getQuery(string language, string query_type) [fl
     @return the total number of node type symbols
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 */
-static int TreeSitterParser::getSymbolCount(string language) [flags=RET_VALUE_ONLY] {
+static int TreeSitterParser::getSymbolCount(string language) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -259,7 +259,7 @@ static int TreeSitterParser::getSymbolCount(string language) [flags=RET_VALUE_ON
     @return the symbol name string
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 */
-static string TreeSitterParser::getSymbolName(string language, int symbol) [flags=RET_VALUE_ONLY] {
+static string TreeSitterParser::getSymbolName(string language, int symbol) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -277,7 +277,7 @@ static string TreeSitterParser::getSymbolName(string language, int symbol) [flag
 
     @see SYMBOL_TYPE_REGULAR, SYMBOL_TYPE_ANONYMOUS, SYMBOL_TYPE_SUPERTYPE, SYMBOL_TYPE_AUXILIARY
 */
-static int TreeSitterParser::getSymbolType(string language, int symbol) [flags=RET_VALUE_ONLY] {
+static int TreeSitterParser::getSymbolType(string language, int symbol) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -291,7 +291,7 @@ static int TreeSitterParser::getSymbolType(string language, int symbol) [flags=R
     @return the total number of field names
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 */
-static int TreeSitterParser::getFieldCount(string language) [flags=RET_VALUE_ONLY] {
+static int TreeSitterParser::getFieldCount(string language) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -306,7 +306,7 @@ static int TreeSitterParser::getFieldCount(string language) [flags=RET_VALUE_ONL
     @return the field name string, or NOTHING if the ID is invalid
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 */
-static *string TreeSitterParser::getFieldName(string language, int field_id) [flags=RET_VALUE_ONLY] {
+static *string TreeSitterParser::getFieldName(string language, int field_id) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -325,7 +325,7 @@ static *string TreeSitterParser::getFieldName(string language, int field_id) [fl
     @return the field ID, or 0 if the field name is not found
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 */
-static int TreeSitterParser::getFieldId(string language, string field_name) [flags=RET_VALUE_ONLY] {
+static int TreeSitterParser::getFieldId(string language, string field_name) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -343,7 +343,7 @@ static int TreeSitterParser::getFieldId(string language, string field_name) [fla
     (e.g., "expression" might be a supertype covering "binary_expression",
     "call_expression", etc.)
 */
-static list<int> TreeSitterParser::getSupertypes(string language) [flags=RET_VALUE_ONLY] {
+static list<int> TreeSitterParser::getSupertypes(string language) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -364,7 +364,7 @@ static list<int> TreeSitterParser::getSupertypes(string language) [flags=RET_VAL
     @return a list of symbol IDs that are subtypes of the given supertype
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 */
-static list<int> TreeSitterParser::getSubtypes(string language, int supertype) [flags=RET_VALUE_ONLY] {
+static list<int> TreeSitterParser::getSubtypes(string language, int supertype) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
     const TSLanguage* lang = TreeSitterLanguages::getLanguage(language->c_str());
     if (!lang) {
         xsink->raiseException("TREESITTER-LANGUAGE-ERROR", "Unknown language: '%s'", language->c_str());
@@ -414,7 +414,7 @@ TreeSitterTree js_tree = js_parser.parse(full_html_source);
 
     @since treesitter 1.0
 */
-bool TreeSitterParser::setIncludedRanges(list<hash<auto>> ranges) {
+bool TreeSitterParser::setIncludedRanges(list<hash<auto>> ranges) [flags=NAMED_ARGS] {
     size_t count = ranges->size();
     if (count == 0) {
         // Reset to full document

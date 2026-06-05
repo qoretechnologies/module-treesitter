@@ -17,6 +17,7 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parser timeout", \testParserTimeout());
         addTestCase("Supported languages", \testSupportedLanguages());
         addTestCase("Parser included ranges", \testParserIncludedRanges());
+        addTestCase("Named argument calls", \testNamedArgumentCalls());
 
         # Basic parsing tests
         addTestCase("Parse Python", \testParsePython());
@@ -190,6 +191,105 @@ class TreeSitterTest inherits QUnit::Test {
 
         # Reset to full document
         assertTrue(parser.setIncludedRanges(()));
+    }
+
+    testNamedArgumentCalls() {
+        TreeSitterParser parser(language: "python");
+        assertTrue(TreeSitterParser::isLanguageSupported(language: "python"));
+        parser.setTimeout(timeout_micros: 0);
+
+        string source = "def foo(x):\n    return x\n";
+        TreeSitterTree tree = parser.parse(source: source);
+        TreeSitterNode root = tree.getRootNode();
+        assertEq("module", root.getType());
+        assertTrue(parser.setIncludedRanges(ranges: ()));
+
+        TreeSitterNode func = root.getNamedChild(index: 0);
+        assertEq("function_definition", func.getType());
+        *TreeSitterNode name = func.getChildByFieldName(field_name: "name");
+        assertTrue(exists name);
+        assertEq("foo", name.getText());
+        assertTrue(exists func.getChild(index: 0));
+        assertEq("name", func.getFieldNameForNamedChild(index: 0));
+        assertNothing(func.getFieldNameForChild(index: 0));
+
+        *TreeSitterNode byte_desc = root.getDescendantForByteRange(start_byte: 4, end_byte: 7);
+        *TreeSitterNode named_byte_desc = root.getNamedDescendantForByteRange(start_byte: 4, end_byte: 7);
+        *TreeSitterNode point_desc = root.getDescendantForPointRange(
+            start_row: 0, start_column: 4, end_row: 0, end_column: 7);
+        *TreeSitterNode named_point_desc = root.getNamedDescendantForPointRange(
+            start_row: 0, start_column: 4, end_row: 0, end_column: 7);
+        assertTrue(exists byte_desc);
+        assertTrue(exists named_byte_desc);
+        assertTrue(exists point_desc);
+        assertTrue(exists named_point_desc);
+        assertTrue(named_byte_desc.equals(other: named_point_desc));
+
+        TreeSitterCursor cursor(node: root);
+        assertTrue(cursor.gotoFirstChildForByte(byte_offset: 4) >= 0);
+        cursor.reset(node: root);
+        assertTrue(cursor.gotoFirstChildForPoint(row: 0, column: 4) >= 0);
+
+        TreeSitterQuery query(
+            language: "python", pattern: "(function_definition name: (identifier) @name) @func");
+        query.setByteRange(start_byte: 0, end_byte: source.length());
+        query.setPointRange(start_row: 0, start_column: 0, end_row: 2, end_column: 0);
+        query.setMaxStartDepth(max_depth: 2);
+        assertEq("name", query.getCaptureName(index: 0));
+        hash<auto> metadata = {};
+        list<hash<auto>> matches = query.execute(node: root, metadata: metadata);
+        list<hash<auto>> captures = query.captures(node: root, metadata: metadata);
+        assertEq(1, matches.size());
+        assertEq(2, captures.size());
+
+        assertEq(1, query.execute(node: root, metadata: metadata).size());
+        assertEq(2, query.captures(node: root, metadata: metadata).size());
+
+        TreeSitterQuery disabled(language: "python", pattern: "(identifier) @id");
+        disabled.disableCapture(name: "id");
+        assertEq(0, disabled.captures(node: root, metadata: metadata).size());
+        disabled.disablePattern(pattern_index: 0);
+        assertEq(0, disabled.execute(node: root, metadata: metadata).size());
+
+        TreeSitterQueryCursor qcursor(query: query);
+        qcursor.setByteRange(start_byte: 0, end_byte: source.length());
+        qcursor.setPointRange(start_row: 0, start_column: 0, end_row: 2, end_column: 0);
+        qcursor.setMaxStartDepth(max_depth: 2);
+        qcursor.setMatchLimit(limit: 128);
+        qcursor.exec(node: root);
+        assertTrue(exists qcursor.nextCapture());
+
+        int symbol_count = TreeSitterParser::getSymbolCount(language: "python");
+        assertTrue(symbol_count > 0);
+        string symbol_name = TreeSitterParser::getSymbolName(language: "python", symbol: 0);
+        assertTrue(symbol_name.length() >= 0);
+        int symbol_type = TreeSitterParser::getSymbolType(language: "python", symbol: 0);
+        assertTrue(symbol_type >= 0 && symbol_type <= 3);
+        int field_count = TreeSitterParser::getFieldCount(language: "python");
+        assertTrue(field_count > 0);
+        *string field_name = TreeSitterParser::getFieldName(language: "python", field_id: 1);
+        assertTrue(exists field_name);
+        string field_name_text = field_name;
+        assertEq(1, TreeSitterParser::getFieldId(language: "python", field_name: field_name_text));
+        list<int> supertypes = TreeSitterParser::getSupertypes(language: "python");
+        if (supertypes.size() > 0) {
+            int supertype = supertypes[0];
+            assertTrue(TreeSitterParser::getSubtypes(language: "python", supertype: supertype).size() > 0);
+        }
+        assertTrue(TreeSitterParser::getHighlightQuery(language: "python").length() > 0);
+
+        TreeSitterTree edited = parser.parse(source: "x = 1");
+        edited.edit(start_byte: 0, old_end_byte: 1, new_end_byte: 1,
+            start_row: 0, start_column: 0,
+            old_end_row: 0, old_end_column: 1,
+            new_end_row: 0, new_end_column: 1);
+        TreeSitterTree reparsed = parser.parseIncremental(source: "y = 1", old_tree: edited);
+        assertTrue(edited.getChangedRanges(other: reparsed).size() >= 0);
+
+        int state = root.getParseState();
+        TreeSitterLookaheadIterator iter(language: "python", state: state);
+        assertTrue(iter.reset(language: "python", state: state));
+        assertTrue(iter.resetState(state: state));
     }
 
     # Basic parsing tests

@@ -139,7 +139,7 @@ int TreeSitterNode::getChildCount() {
 
     @return the child node, or NOTHING if index is out of range
 */
-*TreeSitterNode TreeSitterNode::getChild(int index) {
+*TreeSitterNode TreeSitterNode::getChild(int index) [flags=NAMED_ARGS] {
     TreeSitterNode* child = node->getChild(index);
     if (!child) {
         return QoreValue();
@@ -159,7 +159,7 @@ int TreeSitterNode::getChildCount() {
 *TreeSitterNode body = func_node.getChildByFieldName("body");
     @endcode
 */
-*TreeSitterNode TreeSitterNode::getChildByFieldName(string field_name) {
+*TreeSitterNode TreeSitterNode::getChildByFieldName(string field_name) [flags=NAMED_ARGS] {
     TreeSitterNode* child = node->getChildByFieldName(field_name->c_str());
     if (!child) {
         return QoreValue();
@@ -179,7 +179,7 @@ int TreeSitterNode::getNamedChildCount() {
 
     @return the named child node, or NOTHING if index is out of range
 */
-*TreeSitterNode TreeSitterNode::getNamedChild(int index) {
+*TreeSitterNode TreeSitterNode::getNamedChild(int index) [flags=NAMED_ARGS] {
     TreeSitterNode* child = node->getNamedChild(index);
     if (!child) {
         return QoreValue();
@@ -339,7 +339,7 @@ for (int i = 0; i < func.getChildCount(); i++) {
 }
     @endcode
 */
-*string TreeSitterNode::getFieldNameForChild(int index) [flags=CONSTANT] {
+*string TreeSitterNode::getFieldNameForChild(int index) [flags=CONSTANT,NAMED_ARGS] {
     const char* name = node->getFieldNameForChild(index);
     if (!name) {
         return QoreValue();
@@ -362,7 +362,7 @@ TreeSitterNode func = tree.getRootNode().getNamedChild(0);
 # field == "name" (the function name)
     @endcode
 */
-*string TreeSitterNode::getFieldNameForNamedChild(int index) [flags=CONSTANT] {
+*string TreeSitterNode::getFieldNameForNamedChild(int index) [flags=CONSTANT,NAMED_ARGS] {
     const char* name = node->getFieldNameForNamedChild(index);
     if (!name) {
         return QoreValue();
@@ -434,13 +434,13 @@ string TreeSitterNode::toSexp() {
 }
 
 //! Find the smallest node that spans the given byte range
-/** @param start the start byte
-    @param end the end byte
+/** @param start_byte the start byte
+    @param end_byte the end byte
 
     @return the descendant node, or NOTHING if not found
 */
-*TreeSitterNode TreeSitterNode::getDescendantForByteRange(int start, int end) {
-    TreeSitterNode* desc = node->getDescendantForByteRange(start, end);
+*TreeSitterNode TreeSitterNode::getDescendantForByteRange(int start_byte, int end_byte) [flags=NAMED_ARGS] {
+    TreeSitterNode* desc = node->getDescendantForByteRange(start_byte, end_byte);
     if (!desc) {
         return QoreValue();
     }
@@ -448,13 +448,13 @@ string TreeSitterNode::toSexp() {
 }
 
 //! Find the smallest named node that spans the given byte range
-/** @param start the start byte
-    @param end the end byte
+/** @param start_byte the start byte
+    @param end_byte the end byte
 
     @return the named descendant node, or NOTHING if not found
 */
-*TreeSitterNode TreeSitterNode::getNamedDescendantForByteRange(int start, int end) {
-    TreeSitterNode* desc = node->getNamedDescendantForByteRange(start, end);
+*TreeSitterNode TreeSitterNode::getNamedDescendantForByteRange(int start_byte, int end_byte) [flags=NAMED_ARGS] {
+    TreeSitterNode* desc = node->getNamedDescendantForByteRange(start_byte, end_byte);
     if (!desc) {
         return QoreValue();
     }
@@ -470,7 +470,7 @@ string TreeSitterNode::toSexp() {
     @return the descendant node, or NOTHING if not found
 */
 *TreeSitterNode TreeSitterNode::getDescendantForPointRange(int start_row, int start_column,
-                                                            int end_row, int end_column) {
+                                                            int end_row, int end_column) [flags=NAMED_ARGS] {
     TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
     TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
     TreeSitterNode* desc = node->getDescendantForPointRange(start, end);
@@ -489,7 +489,7 @@ string TreeSitterNode::toSexp() {
     @return the named descendant node, or NOTHING if not found
 */
 *TreeSitterNode TreeSitterNode::getNamedDescendantForPointRange(int start_row, int start_column,
-                                                                  int end_row, int end_column) {
+                                                                  int end_row, int end_column) [flags=NAMED_ARGS] {
     TSPoint start = {static_cast<uint32_t>(start_row), static_cast<uint32_t>(start_column)};
     TSPoint end = {static_cast<uint32_t>(end_row), static_cast<uint32_t>(end_column)};
     TreeSitterNode* desc = node->getNamedDescendantForPointRange(start, end);
@@ -562,6 +562,6 @@ TreeSitterCursor TreeSitterNode::getCursor() {
 
     @return True if the nodes represent the same position in the same tree
 */
-bool TreeSitterNode::equals(TreeSitterNode[TreeSitterNode] other) {
+bool TreeSitterNode::equals(TreeSitterNode[TreeSitterNode] other) [flags=NAMED_ARGS] {
     return node->equals(*other);
 }

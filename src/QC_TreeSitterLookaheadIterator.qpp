@@ -58,7 +58,7 @@ qclass TreeSitterLookaheadIterator [arg=TreeSitterLookaheadIterator* iter; ns=Tr
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
     @throw TREESITTER-LOOKAHEAD-ERROR if the state is invalid for the language
 */
-TreeSitterLookaheadIterator::constructor(string language, int state) {
+TreeSitterLookaheadIterator::constructor(string language, int state) [flags=NAMED_ARGS] {
     ReferenceHolder<TreeSitterLookaheadIterator> holder(
         new TreeSitterLookaheadIterator(language->c_str(), static_cast<TSStateId>(state), xsink), xsink);
     if (*xsink) {
@@ -93,7 +93,7 @@ TreeSitterLookaheadIterator::copy() {
 
     @throw TREESITTER-LANGUAGE-ERROR if the language is not supported
 */
-bool TreeSitterLookaheadIterator::reset(string language, int state) {
+bool TreeSitterLookaheadIterator::reset(string language, int state) [flags=NAMED_ARGS] {
     return iter->reset(language->c_str(), static_cast<TSStateId>(state), xsink);
 }
 
@@ -102,7 +102,7 @@ bool TreeSitterLookaheadIterator::reset(string language, int state) {
 
     @return True if the reset was successful, False if the state is invalid
 */
-bool TreeSitterLookaheadIterator::resetState(int state) {
+bool TreeSitterLookaheadIterator::resetState(int state) [flags=NAMED_ARGS] {
     return iter->resetState(static_cast<TSStateId>(state));
 }
 
