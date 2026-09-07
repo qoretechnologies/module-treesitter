@@ -1,8 +1,10 @@
 #!/usr/bin/env qore
 # -*- mode: qore; indent-tabs-mode: nil -*-
+# Copyright (C) 2026 Qore Technologies, s.r.o.
 
 %modern
 
+%prepend-module-path ${SCRIPT_DIR}/../build
 %requires QUnit
 %requires treesitter
 
@@ -30,6 +32,8 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parse TSX", \testParseTsx());
         addTestCase("Parse SQL", \testParseSQL());
         addTestCase("Parse Markdown", \testParseMarkdown());
+        addTestCase("Parse Qore regular expressions", \testParseQore());
+        addTestCase("Qore scanner error recovery", \testQoreScannerRecovery());
 
         # Tree tests
         addTestCase("Tree root node", \testTreeRootNode());
@@ -293,6 +297,37 @@ class TreeSitterTest inherits QUnit::Test {
     }
 
     # Basic parsing tests
+    testParseQore() {
+        TreeSitterParser parser("qore");
+        list<string> sources = (
+            "int value = 1;",
+            "value =~ /abc/;",
+            "value =~ m{^abc$}i;",
+            "value =~ m{};",
+            "value =~ s{abc}{žluťoučký};",
+            "value =~ tr{abc}{xyz};",
+            "value =~ x{(abc)};",
+        );
+        foreach string source in (sources) {
+            TreeSitterTree tree = parser.parse(source);
+            assertFalse(tree.getRootNode().hasError(), source);
+            assertEq(source, tree.getSource());
+        }
+    }
+
+    testQoreScannerRecovery() {
+        TreeSitterParser parser("qore");
+        foreach string source in (("value =~ m{", "value =~ s{abc}{", "value =~ tr{abc}{")) {
+            TreeSitterTree invalid = parser.parse(source);
+            assertTrue(invalid.getRootNode().hasError(), source);
+            TreeSitterTree recovered = parser.parse("value =~ m{abc};");
+            assertFalse(recovered.getRootNode().hasError(), "scanner recovers after incomplete input");
+        }
+        TreeSitterTree empty = parser.parse("");
+        assertFalse(empty.getRootNode().hasError());
+        assertEq(0, empty.getRootNode().getNamedChildCount());
+    }
+
     testParsePython() {
         TreeSitterParser parser("python");
         TreeSitterTree tree = parser.parse("def hello(): pass");

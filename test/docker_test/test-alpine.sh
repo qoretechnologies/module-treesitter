@@ -47,5 +47,5 @@ chown -R qore:qore ${MODULE_SRC_DIR}
 # run the tests
 cd ${MODULE_SRC_DIR}
 for test in test/*.qtest; do
-    gosu qore:qore qore $test -vv
+    gosu qore:qore qore --enable-debug $test -vv
 done
