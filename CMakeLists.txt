@@ -225,6 +225,11 @@ add_library(tree-sitter-grammars STATIC
     ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown-inline/src/scanner.c
     ${TREE_SITTER_QORE_SRC_DIR}/parser.c
 )
+# Current Qore grammars use an external scanner for brace-delimited regexes.
+# Older installed grammars consist only of parser.c.
+if(EXISTS "${TREE_SITTER_QORE_SRC_DIR}/scanner.c")
+    target_sources(tree-sitter-grammars PRIVATE "${TREE_SITTER_QORE_SRC_DIR}/scanner.c")
+endif()
 target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter_SOURCE_DIR}/lib/include
     ${tree-sitter-python_SOURCE_DIR}/src

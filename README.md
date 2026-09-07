@@ -20,6 +20,8 @@ This module provides bindings to the [tree-sitter](https://tree-sitter.github.io
 - Markdown
 
 **Note:** The Qore tree-sitter grammar is maintained in the [Qore repository](https://github.com/qoretechnologies/qore) as part of the `astparser` module (`modules/astparser/grammars/tree-sitter-qore/`).
+The build uses the installed grammar's `parser.c` and, when present, `scanner.c` for brace-delimited regular expressions
+such as `value =~ m{^abc$}i;`. Install the matching astparser grammar files before rebuilding this module.
 
 ## Features
 

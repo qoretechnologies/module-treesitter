@@ -270,6 +270,8 @@ if (root.hasError()) {
     @section treesitter_release_notes Release Notes
 
     @subsection treesitter_v1_0 treesitter Module Version 1.0
+    - Compile the installed Qore grammar's external scanner when present, fixing unresolved scanner symbols on macOS
+      and enabling Qore brace-delimited regular expressions. Older grammars without a scanner remain supported.
     - Initial release with support for Python, Java, JSON, YAML, JavaScript (js), Kotlin (kt), TypeScript (ts), and
       TSX
     - Full tree-sitter API: parsing, tree traversal, cursors, and queries
