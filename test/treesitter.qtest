@@ -6,6 +6,7 @@
 
 %prepend-module-path ${SCRIPT_DIR}/../build
 %requires QUnit
+%requires FsUtil
 %requires treesitter
 
 %exec-class TreeSitterTest
@@ -97,6 +98,7 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Highlight query invalid language", \testHighlightQueryInvalid());
         addTestCase("Highlight query creates valid query", \testHighlightQueryParseable());
         addTestCase("Highlight query caching", \testHighlightQueryCaching());
+        addTestCase("Query roots and cached sandbox access", \testQueryRoots());
         addTestCase("Generalized query API", \testGeneralizedQueryAPI());
         addTestCase("SQL highlight query", \testSQLHighlightQuery());
         addTestCase("Markdown highlight query", \testMarkdownHighlightQuery());
@@ -1088,20 +1090,18 @@ class TreeSitterTest inherits QUnit::Test {
 
     testHighlightQueryInvalid() {
         # Unsupported language should throw
-        assertThrows("TREESITTER-QUERY-ERROR", sub() {
-            TreeSitterParser::getHighlightQuery("nonexistent");
+        assertThrows("TREESITTER-QUERY-ERROR", string sub() {
+            return TreeSitterParser::getHighlightQuery("nonexistent");
         });
 
         # Qore is a supported parser language but not in the highlight query map
-        assertThrows("TREESITTER-QUERY-ERROR", sub() {
-            TreeSitterParser::getHighlightQuery("qore");
+        assertThrows("TREESITTER-QUERY-ERROR", string sub() {
+            return TreeSitterParser::getHighlightQuery("qore");
         });
     }
 
     testHighlightQueryParseable() {
         # Every bundled query should be parseable by the tree-sitter query engine
-        # Note: some upstream queries use predicates (#match?, #eq?) that may cause
-        # parse errors; such queries are still valid .scm content
         hash<string, string> lang_parser_map = {
             "python": "python",
             "java": "java",
@@ -1116,16 +1116,9 @@ class TreeSitterTest inherits QUnit::Test {
 
         foreach hash<auto> entry in (lang_parser_map.pairIterator()) {
             string query_text = TreeSitterParser::getHighlightQuery(entry.key);
-            try {
-                TreeSitterQuery query(entry.value, query_text);
-                assertTrue(query.getPatternCount() > 0,
-                    sprintf("%s highlight query should have patterns", entry.key));
-            } catch (hash<ExceptionInfo> ex) {
-                # Upstream queries with predicates may not parse — verify it's a query
-                # error (not a missing file or other error)
-                assertEq("TREESITTER-QUERY-ERROR", ex.err,
-                    sprintf("%s query should only fail due to parse error", entry.key));
-            }
+            TreeSitterQuery query(entry.value, query_text);
+            assertTrue(query.getPatternCount() > 0,
+                sprintf("%s highlight query should have patterns", entry.key));
         }
     }
 
@@ -1134,6 +1127,66 @@ class TreeSitterTest inherits QUnit::Test {
         string q1 = TreeSitterParser::getHighlightQuery("python");
         string q2 = TreeSitterParser::getHighlightQuery("python");
         assertEq(q1, q2, "cached query should be identical");
+    }
+
+    testQueryRoots() {
+        TmpDir tmp();
+        *string previous = ENV.QORE_TREESITTER_QUERY_DIR;
+        on_exit {
+            if (exists previous) {
+                setenv("QORE_TREESITTER_QUERY_DIR", previous);
+            } else {
+                unsetenv("QORE_TREESITTER_QUERY_DIR");
+            }
+        }
+        string first = tmp.path + "/first";
+        string second = tmp.path + "/second";
+        foreach string root in (first, second) {
+            mkdir_ex(root + "/python", 0755, True);
+            File file();
+            file.open2(root + "/python/highlights.scm", O_CREAT | O_WRONLY | O_TRUNC, 0600);
+            file.write(root == first ? "(identifier) @first" : "(identifier) @second");
+            file.close();
+        }
+        setenv("QORE_TREESITTER_QUERY_DIR", first);
+        assertEq("(identifier) @first", TreeSitterParser::getHighlightQuery("python"));
+        setenv("QORE_TREESITTER_QUERY_DIR", second);
+        assertEq("(identifier) @second", TreeSitterParser::getHighlightQuery("python"));
+        setenv("QORE_TREESITTER_QUERY_DIR", first);
+        assertEq("(identifier) @first", TreeSitterParser::getHighlightQuery("python"));
+
+        Program program(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES | PO_NO_EMBEDDED_LOGIC);
+        program.loadModule("treesitter");
+        program.parse("string sub query() { return TreeSitterParser::getHighlightQuery(\"python\"); }",
+            "query-sandbox");
+        SandboxManager sandbox();
+        sandbox.setFilesystemSandboxRoot(second);
+        program.setSandboxManager(sandbox);
+        assertThrows("FILESYSTEM-ACCESS-DENIED", \program.callFunction(), ("query",));
+        setenv("QORE_TREESITTER_QUERY_DIR", second);
+        assertEq("(identifier) @second", program.callFunction("query"));
+
+        # Cached data cannot bypass parse-time filesystem restrictions either.
+        Program restricted(PO_NEW_STYLE | PO_NO_FILESYSTEM | PO_NO_EMBEDDED_LOGIC);
+        restricted.loadModule("treesitter");
+        assertThrows("PARSE-EXCEPTION", \restricted.parse(), (
+            "string sub query() { return TreeSitterParser::getHighlightQuery(\"python\"); }",
+            "query-no-filesystem"));
+
+        string link = tmp.path + "/linked";
+        symlink(first, link);
+        setenv("QORE_TREESITTER_QUERY_DIR", link);
+        assertEq("(identifier) @first", TreeSitterParser::getHighlightQuery("python"));
+        unlink(link);
+        symlink(second, link);
+        assertEq("(identifier) @second", TreeSitterParser::getHighlightQuery("python"));
+
+        File empty();
+        empty.open2(second + "/python/locals.scm", O_CREAT | O_WRONLY | O_TRUNC, 0600);
+        empty.close();
+        assertEq("", TreeSitterParser::getQuery("python", "locals"));
+        setenv("QORE_TREESITTER_QUERY_DIR", tmp.path + "/missing");
+        assertThrows("TREESITTER-QUERY-ERROR", \TreeSitterParser::getHighlightQuery(), ("python",));
     }
 
     testGeneralizedQueryAPI() {

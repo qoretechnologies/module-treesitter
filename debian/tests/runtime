@@ -1,0 +1,10 @@
+#!/bin/sh
+# Copyright (C) 2026 David Nichols
+# SPDX-License-Identifier: MIT
+set -eu
+unset QORE_TREESITTER_QUERY_DIR QORE_MODULE_DIR QORE_MODULE_DIR_ONLY QORE_INCLUDE_DIR LD_LIBRARY_PATH LD_PRELOAD
+export QORE_MODULE_DIR=$(/usr/bin/qore --module-path)
+export QORE_MODULE_DIR_ONLY=1
+cp test/*.qtest "$AUTOPKGTEST_TMP/"
+cd "$AUTOPKGTEST_TMP"
+exec timeout 300 /usr/bin/qore treesitter.qtest -v

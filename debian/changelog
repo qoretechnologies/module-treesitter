@@ -1,0 +1,11 @@
+qore-treesitter-module (1.0.0~git20260928.1+ds-0qore1~ubuntu26.04) resolute; urgency=medium
+
+  * Package native bindings, all grammars, query files and compiler metadata.
+  * Include API documentation, example tests and debug symbols.
+  * Use the shared system runtime and nine pinned offline grammar components.
+  * Preserve input sources; use the committed SQL parser without generation.
+  * Support alternate query roots with sandbox checks, including cache hits.
+  * Align runtime license metadata with LGPL source notices.
+  * Add reproducible profiles and installed runtime/compiler tests.
+
+ -- David Nichols <david@qore.org>  Tue, 29 Sep 2026 05:03:46 +0000

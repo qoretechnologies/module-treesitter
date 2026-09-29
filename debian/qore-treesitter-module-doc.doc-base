@@ -1,0 +1,9 @@
+Document: qore-treesitter-module
+Title: Qore tree-sitter Module Reference
+Author: David Nichols
+Abstract: API reference for incremental syntax parsing, trees and queries.
+Section: Programming
+
+Format: HTML
+Index: /usr/share/doc/qore-treesitter-module-doc/html/index.html
+Files: /usr/share/doc/qore-treesitter-module-doc/html/*.html

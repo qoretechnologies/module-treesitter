@@ -1,0 +1,3 @@
+usr/lib/*/qore-modules/treesitter-api-*.qmod
+usr/share/qore/metadata/treesitter/*.meta.json
+usr/share/qore/treesitter/queries/*/*.scm

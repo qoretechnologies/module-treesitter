@@ -45,9 +45,10 @@ make install
 ## Requirements
 
 - Qore 2.0+
-- CMake 3.14+
+- CMake 3.21+
 - C++11 compiler
-- tree-sitter CLI (`npm install -g tree-sitter-cli`) - needed at build time for SQL grammar generation
+- Optional system tree-sitter runtime >= 0.26.5; otherwise CMake fetches the pinned runtime
+- Qore SDK with the installed Qore grammar; SQL uses the committed generated parser
 
 ## Example
 
@@ -73,9 +74,15 @@ printf("S-expression: %s\n", root.toSexp());
 
 ## License
 
-LGPL 2.1 or MIT - see [LICENSE](LICENSE) for details.
+Native implementation: LGPL 2.1 or later; see [COPYING.LGPL](COPYING.LGPL).
+Grammar components retain their upstream licenses. General support files retain
+the previously documented MIT alternative.
 
 ## Links
 
 - [Qore Programming Language](https://qore.org)
 - [tree-sitter](https://tree-sitter.github.io/tree-sitter/)
+
+Set `QORE_TREESITTER_QUERY_DIR` to a directory containing language subdirectories
+to use alternate query files. Queries are cached by canonical filename; sandbox
+filesystem policy applies to every call, including cached results.

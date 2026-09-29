@@ -278,11 +278,22 @@ if (root.hasError()) {
     - Incremental parsing support
     - Query pattern matching for syntax highlighting and code analysis
 
+    @section treesitterpackaging Packaging and query resources
+
+    Debian/Ubuntu packages include all parsers, upstream queries, compiler metadata,
+    API documentation and debug symbols. They use a shared system tree-sitter runtime
+    and pinned offline grammar sources. The Qore grammar comes from the matching SDK.
+    SQL uses the committed generated parser without modifying downloaded sources.
+
+    Set \c QORE_TREESITTER_QUERY_DIR to select an alternate query root containing language
+    subdirectories. Cached queries are keyed by canonical filename and respect the current
+    caller's filesystem sandbox. Query-loading methods require filesystem access.
+
     @section treesitterlicense License
 
     The treesitter module is released under the
-    <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a> or the
-    <a href="https://opensource.org/licenses/MIT">MIT license</a>.
+    <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1 or later</a>
+    for its native implementation. General support files retain the MIT alternative.
 
     Tree-sitter itself is released under the MIT license.
 */

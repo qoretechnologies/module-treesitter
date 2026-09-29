@@ -199,15 +199,18 @@ nothing TreeSitterParser::reset() {
 /** @param language the language name or alias
     @return the highlight query contents
     @throw TREESITTER-QUERY-ERROR if the language is not supported
+    @throw FILESYSTEM-ACCESS-DENIED if the current sandbox denies access to the query file
     @see getQuery()
 */
-static string TreeSitterParser::getHighlightQuery(string language) [flags=NAMED_ARGS] {
+static string TreeSitterParser::getHighlightQuery(string language) [dom=FILESYSTEM;flags=RET_VALUE_ONLY,NAMED_ARGS] {
     return TreeSitterLanguages::getHighlightQuery(language->c_str(), xsink);
 }
 
 //! Get a bundled query file for a language by query type
 /** Returns the contents of the specified query file shipped with the grammar.
-    The result is cached after the first call for each language/type combination.
+    The result is cached by the absolute query filename. Set \c QORE_TREESITTER_QUERY_DIR to
+    use an alternate root containing language subdirectories. Filesystem sandbox checks
+    apply on every call, including cached results. Unset the variable to use installed queries.
 
     Common query types:
     - \c "highlights": syntax highlighting patterns
@@ -223,6 +226,7 @@ static string TreeSitterParser::getHighlightQuery(string language) [flags=NAMED_
     @return the contents of the query file
 
     @throw TREESITTER-QUERY-ERROR if the language is not supported or the query file cannot be found
+    @throw FILESYSTEM-ACCESS-DENIED if the current sandbox denies access to the query file
 
     @par Example:
     @code{.py}
@@ -235,7 +239,7 @@ string injections = TreeSitterParser::getQuery("javascript", "injections");
 
     @since treesitter 1.0
 */
-static string TreeSitterParser::getQuery(string language, string query_type) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
+static string TreeSitterParser::getQuery(string language, string query_type) [dom=FILESYSTEM;flags=RET_VALUE_ONLY,NAMED_ARGS] {
     return TreeSitterLanguages::getQuery(language->c_str(), query_type->c_str(), xsink);
 }
 

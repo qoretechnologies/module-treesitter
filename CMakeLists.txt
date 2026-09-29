@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.21)
 
 project(qore-treesitter-module VERSION 1.0.0)
 
@@ -44,15 +44,30 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
 
-# Fetch tree-sitter core library (only need sources, not CMake targets)
-FetchContent_Declare(
-    tree-sitter
-    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
-    GIT_TAG v0.26.5
-)
-FetchContent_GetProperties(tree-sitter)
-if(NOT tree-sitter_POPULATED)
-    FetchContent_Populate(tree-sitter)
+# Prefer a compatible system runtime; grammar sources remain independently pinned.
+option(QORE_USE_SYSTEM_TREE_SITTER "Use a compatible installed tree-sitter runtime" ON)
+set(QORE_TREE_SITTER_TARGET "")
+if(QORE_USE_SYSTEM_TREE_SITTER)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(QORE_TREE_SITTER QUIET IMPORTED_TARGET "tree-sitter>=0.26.5")
+        if(QORE_TREE_SITTER_FOUND)
+            set(QORE_TREE_SITTER_TARGET PkgConfig::QORE_TREE_SITTER)
+        endif()
+    endif()
+endif()
+if(NOT QORE_TREE_SITTER_TARGET)
+    # Fetch tree-sitter core library (only need sources, not CMake targets)
+    FetchContent_Declare(
+        tree-sitter
+        GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
+        GIT_TAG v0.26.5
+    )
+    FetchContent_GetProperties(tree-sitter)
+    if(NOT tree-sitter_POPULATED)
+        FetchContent_Populate(tree-sitter)
+    endif()
+    set(QORE_TREE_SITTER_TARGET tree-sitter-lib)
 endif()
 
 # Fetch language grammars (only need sources, not their CMake targets)
@@ -136,36 +151,12 @@ if(NOT tree-sitter-sql_POPULATED)
     FetchContent_Populate(tree-sitter-sql)
 endif()
 
-# tree-sitter-sql does not ship generated parser.c; use our checked-in copy
-if(NOT EXISTS "${tree-sitter-sql_SOURCE_DIR}/src/parser.c")
+# Keep fetched/offline sources pristine. SQL's generated parser is committed here.
+set(SQL_GRAMMAR_PARSER "${tree-sitter-sql_SOURCE_DIR}/src/parser.c")
+if(NOT EXISTS "${SQL_GRAMMAR_PARSER}")
     set(SQL_GRAMMAR_PARSER "${CMAKE_SOURCE_DIR}/grammars/sql/src/parser.c")
-    if(EXISTS "${SQL_GRAMMAR_PARSER}")
-        message(STATUS "Copying checked-in SQL grammar parser.c")
-        file(COPY "${SQL_GRAMMAR_PARSER}" DESTINATION "${tree-sitter-sql_SOURCE_DIR}/src")
-    else()
-        # Fall back to generating with tree-sitter CLI
-        find_program(TREE_SITTER_CLI tree-sitter)
-        find_program(NPX_CMD npx)
-        if(TREE_SITTER_CLI)
-            message(STATUS "Generating SQL grammar parser.c with ${TREE_SITTER_CLI}")
-            execute_process(
-                COMMAND ${TREE_SITTER_CLI} generate
-                WORKING_DIRECTORY ${tree-sitter-sql_SOURCE_DIR}
-                RESULT_VARIABLE TS_GEN_RESULT
-            )
-        elseif(NPX_CMD)
-            message(STATUS "Generating SQL grammar parser.c with npx tree-sitter-cli@v0.24.7")
-            execute_process(
-                COMMAND ${NPX_CMD} --yes --package=tree-sitter-cli@v0.24.7 -- tree-sitter generate
-                WORKING_DIRECTORY ${tree-sitter-sql_SOURCE_DIR}
-                RESULT_VARIABLE TS_GEN_RESULT
-            )
-        else()
-            message(FATAL_ERROR "Neither checked-in parser.c, tree-sitter CLI, nor npx found; needed for SQL grammar. Install with: cargo install tree-sitter-cli")
-        endif()
-        if(NOT TS_GEN_RESULT EQUAL 0)
-            message(FATAL_ERROR "Failed to generate SQL grammar parser.c")
-        endif()
+    if(NOT EXISTS "${SQL_GRAMMAR_PARSER}")
+        message(FATAL_ERROR "SQL parser.c is missing; regenerate and commit it before configuring")
     endif()
 endif()
 
@@ -192,14 +183,19 @@ if(NOT TREE_SITTER_QORE_SRC_DIR)
 endif()
 message(STATUS "Found Qore tree-sitter grammar: ${TREE_SITTER_QORE_SRC_DIR}")
 
-# Build tree-sitter as a static library
-add_library(tree-sitter-lib STATIC
-    ${tree-sitter_SOURCE_DIR}/lib/src/lib.c
-)
-target_include_directories(tree-sitter-lib PUBLIC
-    ${tree-sitter_SOURCE_DIR}/lib/include
-    ${tree-sitter_SOURCE_DIR}/lib/src
-)
+if(QORE_TREE_SITTER_TARGET STREQUAL "tree-sitter-lib")
+    # Build tree-sitter as a static library
+    add_library(tree-sitter-lib STATIC
+        ${tree-sitter_SOURCE_DIR}/lib/src/lib.c
+    )
+    target_include_directories(tree-sitter-lib PUBLIC
+        ${tree-sitter_SOURCE_DIR}/lib/include
+        ${tree-sitter_SOURCE_DIR}/lib/src
+    )
+    set_target_properties(tree-sitter-lib PROPERTIES C_VISIBILITY_PRESET hidden)
+    # api.h and alloc.h use different visibility switches in the pinned runtime.
+    target_compile_definitions(tree-sitter-lib PRIVATE TREE_SITTER_HIDE_SYMBOLS TREE_SITTER_HIDDEN_SYMBOLS)
+endif()
 
 # Build grammar parsers
 add_library(tree-sitter-grammars STATIC
@@ -217,7 +213,7 @@ add_library(tree-sitter-grammars STATIC
     ${tree-sitter-typescript_SOURCE_DIR}/typescript/src/scanner.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/parser.c
     ${tree-sitter-typescript_SOURCE_DIR}/tsx/src/scanner.c
-    ${tree-sitter-sql_SOURCE_DIR}/src/parser.c
+    ${SQL_GRAMMAR_PARSER}
     ${tree-sitter-sql_SOURCE_DIR}/src/scanner.c
     ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown/src/parser.c
     ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown/src/scanner.c
@@ -231,7 +227,6 @@ if(EXISTS "${TREE_SITTER_QORE_SRC_DIR}/scanner.c")
     target_sources(tree-sitter-grammars PRIVATE "${TREE_SITTER_QORE_SRC_DIR}/scanner.c")
 endif()
 target_include_directories(tree-sitter-grammars PUBLIC
-    ${tree-sitter_SOURCE_DIR}/lib/include
     ${tree-sitter-python_SOURCE_DIR}/src
     ${tree-sitter-java_SOURCE_DIR}/src
     ${tree-sitter-json_SOURCE_DIR}/src
@@ -245,6 +240,11 @@ target_include_directories(tree-sitter-grammars PUBLIC
     ${tree-sitter-markdown_SOURCE_DIR}/tree-sitter-markdown-inline/src
     ${TREE_SITTER_QORE_SRC_DIR}
 )
+
+# Grammar entry points must not interpose Qore's independently compiled grammar.
+set_target_properties(tree-sitter-grammars PROPERTIES C_VISIBILITY_PRESET hidden)
+target_compile_definitions(tree-sitter-grammars PRIVATE TREE_SITTER_HIDE_SYMBOLS)
+target_link_libraries(tree-sitter-grammars PUBLIC ${QORE_TREE_SITTER_TARGET})
 
 set(QPP_SRC
     src/QC_TreeSitterParser.qpp
@@ -286,13 +286,12 @@ add_library(${module_name} MODULE ${CPP_SRC} ${QPP_SOURCES})
 include_directories(${CMAKE_SOURCE_DIR}/src)
 target_include_directories(${module_name} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-    ${tree-sitter_SOURCE_DIR}/lib/include
 )
 
 add_custom_target(QORE_INC_FILES DEPENDS ${QORE_INC_SRC})
 add_dependencies(${module_name} QORE_INC_FILES)
 
-target_link_libraries(${module_name} tree-sitter-lib tree-sitter-grammars ${QORE_LIBRARY})
+target_link_libraries(${module_name} tree-sitter-grammars ${QORE_LIBRARY})
 
 set(MODULE_DOX_INPUT ${CMAKE_CURRENT_BINARY_DIR}/mainpage.dox ${QPP_DOX})
 string(REPLACE ";" " " MODULE_DOX_INPUT "${MODULE_DOX_INPUT}")
@@ -322,6 +321,7 @@ endif()
 # e.g. /usr/share/qore/metadata -> /usr/share/qore/treesitter/queries
 get_filename_component(QORE_DATA_BASE_DIR "${QORE_METADATA_DIR}" DIRECTORY)
 set(TS_QUERY_INSTALL_DIR "${QORE_DATA_BASE_DIR}/treesitter/queries")
+set(TS_QUERY_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/queries")
 
 # Define grammar query directories - install all .scm files from each
 set(TS_GRAMMAR_QUERY_DIRS
@@ -344,6 +344,8 @@ foreach(entry ${TS_GRAMMAR_QUERY_DIRS})
         file(GLOB scm_files "${query_dir}/*.scm")
         foreach(scm_file ${scm_files})
             get_filename_component(scm_name "${scm_file}" NAME)
+            file(MAKE_DIRECTORY "${TS_QUERY_BUILD_DIR}/${lang}")
+            configure_file("${scm_file}" "${TS_QUERY_BUILD_DIR}/${lang}/${scm_name}" COPYONLY)
             install(FILES "${scm_file}"
                     DESTINATION "${TS_QUERY_INSTALL_DIR}/${lang}")
         endforeach()

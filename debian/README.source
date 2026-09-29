@@ -1,0 +1,37 @@
+Qore tree-sitter module packages
+================================
+
+This snapshot targets qore-testing. It ships native bindings, eleven language
+parsers, upstream queries, compiler metadata, documentation and debug symbols.
+There are no Qore user modules or app catalogs in this repository.
+
+The package uses libtree-sitter >= 0.26.5 dynamically. Nine independently pinned
+MIT grammar components contain their original source/grammar definitions,
+queries and license files. No npm, Rust or network generation runs in the build.
+The committed SQL parser is used directly without modifying the source component.
+The Qore parser/scanner comes from the matching libqore-dev SDK. Built-Using
+records its source package and exact version for source retention. All private
+grammar symbols are hidden, avoiding interposition with Qore's astparser.
+
+Prepare the module orig archive from a committed checkout excluding debian/.
+Download the nine archives listed in vendor-sources.json outside the build, then
+run debian/repack-grammars.py ARCHIVE_DIRECTORY OUTPUT_DIRECTORY. It verifies
+checksums and creates deterministic orig components retaining only the listed
+paths. Extract each component to its named directory without the upstream
+wrapper directory; copy debian and run dpkg-buildpackage -S -sa -us -uc.
+dpkg-source -x restores all components. Increment the version for each upload.
+
+Build unprivileged offline with declared dependencies and the packaged Qore 3
+SDK. Full, -B, -A, nocheck and nodoc profiles are supported. Cross builds fail
+explicitly since Qore tools execute during the build. The query files copied to
+the build tree are tested using QORE_TREESITTER_QUERY_DIR; installed tests unset
+that variable and validate only packaged resources. Source-root changes and
+sandbox denial on cached queries are regression-tested. Fresh qcc compilation
+checks metadata, parsing and query execution without checkout paths.
+
+Qualify source/component/query parity, debug/hardening, both default and custom
+query roots, documentation, SDK-free install/purge/reinstall, all tests and byte
+reproducibility across paths/job counts. Initially only Ubuntu 26.04 amd64 / SDK
+.12 is qualified. Other releases/architectures, future upgrade paths and the
+Qore ABI freeze remain general-release requirements. Testing PPA publication
+requires matching published SDK/library dependencies, signing and upload.

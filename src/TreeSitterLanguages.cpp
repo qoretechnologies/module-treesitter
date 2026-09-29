@@ -22,8 +22,9 @@
 
 #include "treesitter-module.h"
 
-#include <fstream>
-#include <sstream>
+#include <qore/QoreFile.h>
+#include <qore/QoreSandboxManager.h>
+#include <qore/SystemEnvironment.h>
 #include <unordered_set>
 
 // External language declarations
@@ -147,32 +148,71 @@ QoreStringNode* TreeSitterLanguages::getQuery(const char* name, const char* quer
         return nullptr;
     }
     const std::string& canonical = alias_it->second;
-    std::string cache_key = canonical + "/" + qtype;
+    QoreString path;
+    SystemEnvironment::get("QORE_TREESITTER_QUERY_DIR", path);
+    if (path.empty()) {
+        path.concat(TREESITTER_QUERY_DIR);
+    }
+    path.concat("/");
+    path.concat(canonical.c_str());
+    path.concat("/");
+    path.concat(qtype.c_str());
+    path.concat(".scm");
+    q_normalize_path(path);
 
-    std::lock_guard<std::mutex> lock(query_cache_mutex);
-
-    // Check cache
-    auto cache_it = query_cache.find(cache_key);
-    if (cache_it != query_cache.end()) {
-        return new QoreStringNode(cache_it->second);
+    // Check the current caller even on a cache hit: a query cached by a privileged
+    // program must never bypass the filesystem policy of a later caller.
+    QoreSandboxManagerHelper smh;
+    if (smh && !smh->checkFilesystemAccess(path.c_str(), QSEC_READ, xsink)) {
+        return nullptr;
+    }
+    if (qore_check_cancel(xsink, "reading tree-sitter query")) {
+        return nullptr;
+    }
+    QoreString resolved;
+    if (q_realpath(path, resolved)) {
+        xsink->raiseException("TREESITTER-QUERY-ERROR",
+            "cannot resolve %s query file for language '%s': %s", query_type, name, path.c_str());
+        return nullptr;
+    }
+    // Canonical paths keep symlink aliases and changing relative roots from
+    // sharing cached data with a different underlying file.
+    path = resolved;
+    if (smh && !smh->checkFilesystemAccess(path.c_str(), QSEC_READ, xsink)) {
+        return nullptr;
+    }
+    std::string cache_key(path.c_str(), path.size());
+    {
+        std::lock_guard<std::mutex> lock(query_cache_mutex);
+        auto cache_it = query_cache.find(cache_key);
+        if (cache_it != query_cache.end()) {
+            return new QoreStringNode(cache_it->second);
+        }
     }
 
-    // Build the file path and read (file I/O is fast for small .scm files)
-    std::string path = std::string(TREESITTER_QUERY_DIR) + "/" + canonical + "/" + qtype + ".scm";
-
-    std::ifstream file(path);
-    if (!file.is_open()) {
+    // QoreFile closes automatically and supplies interruptible reads. Do not
+    // hold the global cache lock while reading a potentially slow filesystem.
+    QoreFile file;
+    int flags = O_RDONLY;
+#ifndef _Q_WINDOWS
+    // Avoid blocking in open() if an alternate query root contains a FIFO.
+    flags |= O_NONBLOCK;
+#endif
+    if (file.open(path.c_str(), flags, 0, QCS_UTF8)) {
         xsink->raiseException("TREESITTER-QUERY-ERROR",
             "cannot open %s query file for language '%s': %s", query_type, name, path.c_str());
         return nullptr;
     }
 
-    std::ostringstream ss;
-    ss << file.rdbuf();
-    query_cache[cache_key] = ss.str();
-    const std::string& content = query_cache[cache_key];
+    QoreStringNodeHolder contents(file.read(-1, xsink));
+    if (*xsink) {
+        return nullptr;
+    }
 
-    return new QoreStringNode(content);
+    std::lock_guard<std::mutex> lock(query_cache_mutex);
+    auto entry = query_cache.emplace(cache_key,
+        contents ? std::string(contents->c_str(), contents->size()) : std::string());
+    return new QoreStringNode(entry.first->second);
 }
 
 QoreStringNode* TreeSitterLanguages::getHighlightQuery(const char* name, ExceptionSink* xsink) {

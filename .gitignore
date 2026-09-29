@@ -23,3 +23,23 @@ docs/html/
 # Node.js
 node_modules/
 package-lock.json
+
+# Debian package builds
+obj-*/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.debhelper.log
+debian/*.substvars
+debian/qore-treesitter-module/
+debian/qore-treesitter-module-doc/
+debian/tmp/
+/python/
+/java/
+/json/
+/yaml/
+/javascript/
+/kotlin/
+/typescript/
+/sql/
+/markdown/
