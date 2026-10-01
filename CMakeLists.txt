@@ -197,14 +197,25 @@ if(QORE_TREE_SITTER_TARGET STREQUAL "tree-sitter-lib")
     target_compile_definitions(tree-sitter-lib PRIVATE TREE_SITTER_HIDE_SYMBOLS TREE_SITTER_HIDDEN_SYMBOLS)
 endif()
 
+# The pinned scanners discard popped values intentionally; YAML's internal
+# lexer handles EOF only. Keep these small source fixes private to the build.
+include(cmake/QoreTreeSitterGrammarFixes.cmake)
+qore_treesitter_fixed_source(python scanner.c "${tree-sitter-python_SOURCE_DIR}/src" PYTHON_SCANNER)
+qore_treesitter_fixed_source(yaml scanner.c "${tree-sitter-yaml_SOURCE_DIR}/src" YAML_SCANNER)
+qore_treesitter_fixed_source(yaml parser.c "${tree-sitter-yaml_SOURCE_DIR}/src" YAML_PARSER)
+set_source_files_properties("${PYTHON_SCANNER}" PROPERTIES
+    INCLUDE_DIRECTORIES "${tree-sitter-python_SOURCE_DIR}/src")
+set_source_files_properties("${YAML_SCANNER}" "${YAML_PARSER}" PROPERTIES
+    INCLUDE_DIRECTORIES "${tree-sitter-yaml_SOURCE_DIR}/src")
+
 # Build grammar parsers
 add_library(tree-sitter-grammars STATIC
     ${tree-sitter-python_SOURCE_DIR}/src/parser.c
-    ${tree-sitter-python_SOURCE_DIR}/src/scanner.c
+    ${PYTHON_SCANNER}
     ${tree-sitter-java_SOURCE_DIR}/src/parser.c
     ${tree-sitter-json_SOURCE_DIR}/src/parser.c
-    ${tree-sitter-yaml_SOURCE_DIR}/src/parser.c
-    ${tree-sitter-yaml_SOURCE_DIR}/src/scanner.c
+    ${YAML_PARSER}
+    ${YAML_SCANNER}
     ${tree-sitter-javascript_SOURCE_DIR}/src/parser.c
     ${tree-sitter-javascript_SOURCE_DIR}/src/scanner.c
     ${tree-sitter-kotlin_SOURCE_DIR}/src/parser.c

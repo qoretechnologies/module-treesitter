@@ -86,3 +86,23 @@ the previously documented MIT alternative.
 Set `QORE_TREESITTER_QUERY_DIR` to a directory containing language subdirectories
 to use alternate query files. Queries are cached by canonical filename; sandbox
 filesystem policy applies to every call, including cached results.
+
+The pinned Python 0.25.0 and YAML 0.7.2 grammars have small, hash-checked fixes
+applied to private build-tree copies. Scanner stack pops explicitly discard
+unused values; YAML removes an unused whitespace variable and documents its
+intentional tag-scanner fallthroughs. Its EOF-only internal lexer omits generic
+character-lookahead state while preserving token and callback behavior.
+Downloaded grammar sources remain unchanged. Updating either grammar requires
+reviewing the source hashes and fixes together.
+
+To validate these fixes against unpacked pinned grammar sources:
+
+```sh
+python3 test/test_grammar_fixes.py /path/to/tree-sitter-python-0.25.0 /path/to/tree-sitter-yaml-0.7.2 -v
+```
+
+The checks compile every fixed source with warnings as errors, verify immutable
+inputs and repeatable outputs, reject missing or unexpected sources, and compare
+all 65,536 YAML lexer states under eight EOF/lookahead combinations. The Qore
+suite additionally covers indentation, quotes, block scalars, tags, malformed
+input and parser recovery.

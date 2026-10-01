@@ -27,6 +27,8 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Parse Java", \testParseJava());
         addTestCase("Parse JSON", \testParseJSON());
         addTestCase("Parse YAML", \testParseYAML());
+        addTestCase("Python scanner stack transitions", \testPythonScannerStacks());
+        addTestCase("YAML scanner stack and EOF transitions", \testYamlScannerStacks());
         addTestCase("Parse JavaScript", \testParseJavaScript());
         addTestCase("Parse Kotlin", \testParseKotlin());
         addTestCase("Parse TypeScript", \testParseTypeScript());
@@ -352,6 +354,44 @@ class TreeSitterTest inherits QUnit::Test {
         TreeSitterParser parser("yaml");
         TreeSitterTree tree = parser.parse("key: value");
         assertEq("stream", tree.getRootNode().getType());
+    }
+
+    testPythonScannerStacks() {
+        TreeSitterParser parser("python");
+        list<string> samples = (
+            "def f():\n    if True:\n        return 'single'\n    return \"double\"\nresult = f()\n",
+            "value = \"\"\"first\nsecond\"\"\"\nother = 'after'\n",
+            "value = f'hello {1 + 2}'\nraw = r'back\\slash'\n",
+            "",
+        );
+        foreach string source in (samples) {
+            TreeSitterTree tree = parser.parse(source);
+            assertFalse(tree.getRootNode().hasError(), source);
+            assertEq(source, tree.getSource());
+        }
+        assertTrue(parser.parse("value = 'unterminated").getRootNode().hasError());
+        assertFalse(parser.parse("after_error = 'valid'\n").getRootNode().hasError());
+    }
+
+    testYamlScannerStacks() {
+        TreeSitterParser parser("yaml");
+        list<string> samples = (
+            "root:\n  list:\n    - first\n    - nested:\n        key: value\nnext: done\n",
+            "literal: |\n  one\n  two\nfolded: >\n  three\n  four\nnext: done\n",
+            "---\nkey: [one, {nested: two}]\n...\n---\nother: value\n",
+            "%TAG !e! tag:example.com,2026:\n---\nkey: !e!kind value\n",
+            "key: !<tag:example.com,2026:kind> value\n",
+            "", "# comment only", "key: value", "key: value\n",
+        );
+        foreach string source in (samples) {
+            TreeSitterTree tree = parser.parse(source);
+            assertFalse(tree.getRootNode().hasError(), source);
+            assertEq(source, tree.getSource());
+            assertEq("stream", tree.getRootNode().getType());
+        }
+        assertTrue(parser.parse("key: [unterminated").getRootNode().hasError());
+        assertTrue(parser.parse("key: !<tag:broken value").getRootNode().hasError());
+        assertFalse(parser.parse("after_error: valid\n").getRootNode().hasError());
     }
 
     testParseJavaScript() {
