@@ -45,6 +45,13 @@ class TreeSitterTest inherits QUnit::Test {
         addTestCase("Tree edit", \testTreeEdit());
         addTestCase("Tree changed ranges", \testTreeChangedRanges());
 
+        addTestCase("Nodes retain deleted trees", \testNodeTreeLifetime());
+        addTestCase("Copied child retains complete source", \testCopiedChildLifetime());
+        addTestCase("Traversal cursor retains and resets tree", \testCursorTreeLifetime());
+        addTestCase("Query cursor retains temporary trees", \testQueryTreeLifetime());
+        addTestCase("Concurrent cursor tree ownership", \testConcurrentCursorOwnership());
+        addTestCase("Empty and large retained child lists", \testRetainedChildLists());
+
         # Node tests
         addTestCase("Node type", \testNodeType());
         addTestCase("Node positions", \testNodePositions());
@@ -354,6 +361,119 @@ class TreeSitterTest inherits QUnit::Test {
         TreeSitterParser parser("yaml");
         TreeSitterTree tree = parser.parse("key: value");
         assertEq("stream", tree.getRootNode().getType());
+    }
+
+    testNodeTreeLifetime() {
+        TreeSitterParser parser("python");
+        TreeSitterTree tree = parser.parse("first = 1\nsecond = 2\n");
+        TreeSitterNode root = tree.getRootNode();
+        list<TreeSitterNode> children = root.getChildren();
+        list<TreeSitterNode> named = root.getNamedChildren();
+        delete tree;
+        delete parser;
+        assertEq("module", root.getType());
+        assertFalse(root.hasError());
+        assertEq("first = 1", children[0].getText());
+        assertEq("second = 2", named[1].getText());
+        TreeSitterNode second = named[0].getNextNamedSibling();
+        assertEq("second = 2", second.getText());
+        assertEq("first = 1", second.getPrevNamedSibling().getText());
+        assertEq("module", second.getParent().getType());
+        assertEq("first", root.getNamedDescendantForByteRange(0, 5).getText());
+        assertNothing(second.getNextNamedSibling());
+    }
+
+    testCopiedChildLifetime() {
+        TreeSitterParser parser("python");
+        TreeSitterNode name = parser.parse("prefix = 1\ndef target(): pass\n")
+            .getRootNode().getNamedChild(1).getChildByFieldName("name");
+        TreeSitterNode duplicate = name.copy();
+        delete name;
+        delete parser;
+        assertEq("target", duplicate.getText());
+        assertEq("identifier", duplicate.getType());
+        assertEq(15, duplicate.getStartByte());
+        assertEq("function_definition", duplicate.getParent().getType());
+    }
+
+    testCursorTreeLifetime() {
+        TreeSitterParser parser("python");
+        TreeSitterCursor cursor = parser.parse("old = 1\n").getRootNode().getCursor();
+        assertTrue(cursor.gotoFirstChild());
+        assertEq("old = 1", cursor.getCurrentNode().getText());
+        TreeSitterCursor duplicate = cursor.copy();
+        cursor.reset(parser.parse("replacement = 22\n").getRootNode());
+        delete parser;
+        assertEq("replacement = 22\n", cursor.getCurrentNode().getText());
+        assertEq("old = 1", duplicate.getCurrentNode().getText());
+        assertFalse(duplicate.gotoNextSibling());
+        assertTrue(duplicate.gotoParent());
+        assertEq("module", duplicate.getCurrentNode().getType());
+        delete cursor;
+        assertEq("old = 1\n", duplicate.getCurrentNode().getText());
+    }
+
+    testRetainedChildLists() {
+        TreeSitterParser parser("python");
+        assertEq(0, parser.parse("").getRootNode().getChildren().size());
+        assertEq(0, parser.parse("").getRootNode().getNamedChildren().size());
+        string source;
+        for (int i = 0; i < 201; ++i) {
+            source += "value = 1\n";
+        }
+        list<TreeSitterNode> children = parser.parse(source).getRootNode().getChildren();
+        list<TreeSitterNode> named = parser.parse(source).getRootNode().getNamedChildren();
+        delete parser;
+        assertEq(201, children.size());
+        assertEq(201, named.size());
+        assertEq("value = 1", children[200].getText());
+        assertEq("value = 1", named[200].getText());
+        assertEq(2000, children[200].getStartByte());
+    }
+
+    testConcurrentCursorOwnership() {
+        TreeSitterParser parser("python");
+        TreeSitterNode first = parser.parse("first = 1\n").getRootNode();
+        TreeSitterNode second = parser.parse("second = 2\n").getRootNode();
+        TreeSitterCursor cursor(first);
+        Counter done(2);
+        Queue errors();
+        foreach TreeSitterNode root in (first, second) {
+            background sub (TreeSitterNode target) {
+                on_exit done.dec();
+                try {
+                    for (int i = 0; i < 100; ++i) {
+                        cursor.reset(target);
+                        TreeSitterCursor duplicate = cursor.copy();
+                        string text = duplicate.getCurrentNode().getText();
+                        if (text != "first = 1\n" && text != "second = 2\n") {
+                            errors.push(text);
+                        }
+                    }
+                } catch (hash<ExceptionInfo> ex) {
+                    errors.push(ex);
+                }
+            }(root);
+        }
+        done.waitForZero();
+        assertEq(0, errors.size());
+        assertEq("module", cursor.getCurrentNode().getType());
+    }
+
+    testQueryTreeLifetime() {
+        TreeSitterParser parser("python");
+        TreeSitterQuery query("python", "(function_definition name: (identifier) @name)");
+        TreeSitterQueryCursor cursor(query);
+        cursor.exec(parser.parse("def before(): pass\n").getRootNode());
+        assertEq("before", cursor.nextCapture().node.text);
+        assertNothing(cursor.nextCapture());
+        cursor.exec(parser.parse("def after(): pass\n").getRootNode());
+        delete parser;
+        delete query;
+        *hash<auto> match = cursor.nextMatch();
+        assertTrue(exists match);
+        assertEq("after", match.captures[0].node.text);
+        assertNothing(cursor.nextMatch());
     }
 
     testPythonScannerStacks() {

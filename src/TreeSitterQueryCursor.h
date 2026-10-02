@@ -80,7 +80,7 @@ public:
 private:
     TSQueryCursor* cursor;
     TreeSitterQuery* query;    //!< ref-counted reference
-    std::string source;        //!< source from last exec() call
+    std::shared_ptr<TreeSitterTree> tree; //!< retains the nodes used by the active query
     mutable std::mutex mutex;
 
     // Prevent copying

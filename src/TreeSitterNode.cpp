@@ -21,13 +21,22 @@
 */
 
 #include "TreeSitterNode.h"
+#include "TreeSitterTree.h"
 
-TreeSitterNode::TreeSitterNode(TSNode node, const std::string& source)
-    : node(node), source(source) {
+#include <cassert>
+
+TreeSitterNode::TreeSitterNode(TSNode node, std::shared_ptr<TreeSitterTree> tree)
+    : node(node), tree(std::move(tree)) {
+    assert(this->tree);
+    assert(node.tree == this->tree->getTree());
+}
+
+const std::string& TreeSitterNode::getSource() const {
+    return tree->getSource();
 }
 
 TreeSitterNode::~TreeSitterNode() {
-    // TSNode is a value type, no cleanup needed
+    // The shared owner keeps the TSTree alive until its last node/cursor is released.
 }
 
 const char* TreeSitterNode::getType() const {
@@ -57,10 +66,10 @@ TSPoint TreeSitterNode::getEndPoint() const {
 QoreStringNode* TreeSitterNode::getText() const {
     uint32_t start = ts_node_start_byte(node);
     uint32_t end = ts_node_end_byte(node);
-    if (start >= source.size() || end > source.size()) {
+    if (start >= getSource().size() || end > getSource().size()) {
         return new QoreStringNode();
     }
-    return new QoreStringNode(source.substr(start, end - start));
+    return new QoreStringNode(getSource().substr(start, end - start));
 }
 
 uint32_t TreeSitterNode::getChildCount() const {
@@ -72,7 +81,7 @@ TreeSitterNode* TreeSitterNode::getChild(uint32_t index) const {
     if (ts_node_is_null(child)) {
         return nullptr;
     }
-    return new TreeSitterNode(child, source);
+    return new TreeSitterNode(child, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getChildByFieldName(const char* field_name) const {
@@ -80,7 +89,7 @@ TreeSitterNode* TreeSitterNode::getChildByFieldName(const char* field_name) cons
     if (ts_node_is_null(child)) {
         return nullptr;
     }
-    return new TreeSitterNode(child, source);
+    return new TreeSitterNode(child, tree);
 }
 
 uint32_t TreeSitterNode::getNamedChildCount() const {
@@ -92,7 +101,7 @@ TreeSitterNode* TreeSitterNode::getNamedChild(uint32_t index) const {
     if (ts_node_is_null(child)) {
         return nullptr;
     }
-    return new TreeSitterNode(child, source);
+    return new TreeSitterNode(child, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getParent() const {
@@ -100,7 +109,7 @@ TreeSitterNode* TreeSitterNode::getParent() const {
     if (ts_node_is_null(parent)) {
         return nullptr;
     }
-    return new TreeSitterNode(parent, source);
+    return new TreeSitterNode(parent, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getNextSibling() const {
@@ -108,7 +117,7 @@ TreeSitterNode* TreeSitterNode::getNextSibling() const {
     if (ts_node_is_null(sibling)) {
         return nullptr;
     }
-    return new TreeSitterNode(sibling, source);
+    return new TreeSitterNode(sibling, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getPrevSibling() const {
@@ -116,7 +125,7 @@ TreeSitterNode* TreeSitterNode::getPrevSibling() const {
     if (ts_node_is_null(sibling)) {
         return nullptr;
     }
-    return new TreeSitterNode(sibling, source);
+    return new TreeSitterNode(sibling, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getNextNamedSibling() const {
@@ -124,7 +133,7 @@ TreeSitterNode* TreeSitterNode::getNextNamedSibling() const {
     if (ts_node_is_null(sibling)) {
         return nullptr;
     }
-    return new TreeSitterNode(sibling, source);
+    return new TreeSitterNode(sibling, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getPrevNamedSibling() const {
@@ -132,7 +141,7 @@ TreeSitterNode* TreeSitterNode::getPrevNamedSibling() const {
     if (ts_node_is_null(sibling)) {
         return nullptr;
     }
-    return new TreeSitterNode(sibling, source);
+    return new TreeSitterNode(sibling, tree);
 }
 
 bool TreeSitterNode::isNamed() const {
@@ -177,26 +186,31 @@ const char* TreeSitterNode::getFieldNameForNamedChild(uint32_t named_child_index
     return ts_node_field_name_for_named_child(node, named_child_index);
 }
 
-std::vector<TreeSitterNode*> TreeSitterNode::getChildren() const {
-    std::vector<TreeSitterNode*> result;
-    uint32_t count = ts_node_child_count(node);
-    result.reserve(count);
-    for (uint32_t i = 0; i < count; i++) {
-        TSNode child = ts_node_child(node, i);
-        result.push_back(new TreeSitterNode(child, source));
-    }
-    return result;
+QoreListNode* TreeSitterNode::getChildren(ExceptionSink* xsink) const {
+    return getChildren(false, xsink);
 }
 
-std::vector<TreeSitterNode*> TreeSitterNode::getNamedChildren() const {
-    std::vector<TreeSitterNode*> result;
-    uint32_t count = ts_node_named_child_count(node);
-    result.reserve(count);
-    for (uint32_t i = 0; i < count; i++) {
-        TSNode child = ts_node_named_child(node, i);
-        result.push_back(new TreeSitterNode(child, source));
+QoreListNode* TreeSitterNode::getNamedChildren(ExceptionSink* xsink) const {
+    return getChildren(true, xsink);
+}
+
+QoreListNode* TreeSitterNode::getChildren(bool named, ExceptionSink* xsink) const {
+    ReferenceHolder<QoreListNode> result(new QoreListNode(QC_TREESITTERNODE->getTypeInfo()), xsink);
+    uint32_t count = named ? ts_node_named_child_count(node) : ts_node_child_count(node);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (!(i % 100) && qore_check_cancel(xsink, "collecting tree-sitter children")) {
+            return nullptr;
+        }
+        TSNode value = named ? ts_node_named_child(node, i) : ts_node_child(node, i);
+        std::unique_ptr<TreeSitterNode> child(new TreeSitterNode(value, tree));
+        ReferenceHolder<QoreObject> object(new QoreObject(QC_TREESITTERNODE, getProgram(), child.get()), xsink);
+        child.release();
+        result->push(object.release(), xsink);
+        if (*xsink) {
+            return nullptr;
+        }
     }
-    return result;
+    return result.release();
 }
 
 QoreHashNode* TreeSitterNode::toHash() const {
@@ -233,7 +247,7 @@ TreeSitterNode* TreeSitterNode::getDescendantForByteRange(uint32_t start, uint32
     if (ts_node_is_null(desc)) {
         return nullptr;
     }
-    return new TreeSitterNode(desc, source);
+    return new TreeSitterNode(desc, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getNamedDescendantForByteRange(uint32_t start, uint32_t end) const {
@@ -241,7 +255,7 @@ TreeSitterNode* TreeSitterNode::getNamedDescendantForByteRange(uint32_t start, u
     if (ts_node_is_null(desc)) {
         return nullptr;
     }
-    return new TreeSitterNode(desc, source);
+    return new TreeSitterNode(desc, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getDescendantForPointRange(TSPoint start, TSPoint end) const {
@@ -249,7 +263,7 @@ TreeSitterNode* TreeSitterNode::getDescendantForPointRange(TSPoint start, TSPoin
     if (ts_node_is_null(desc)) {
         return nullptr;
     }
-    return new TreeSitterNode(desc, source);
+    return new TreeSitterNode(desc, tree);
 }
 
 TreeSitterNode* TreeSitterNode::getNamedDescendantForPointRange(TSPoint start, TSPoint end) const {
@@ -257,7 +271,7 @@ TreeSitterNode* TreeSitterNode::getNamedDescendantForPointRange(TSPoint start, T
     if (ts_node_is_null(desc)) {
         return nullptr;
     }
-    return new TreeSitterNode(desc, source);
+    return new TreeSitterNode(desc, tree);
 }
 
 uint32_t TreeSitterNode::getDescendantCount() const {

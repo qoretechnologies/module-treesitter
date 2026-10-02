@@ -37,7 +37,12 @@ TreeSitterNode* TreeSitterTree::getRootNode() const {
         return nullptr;
     }
     TSNode root = ts_tree_root_node(tree);
-    return new TreeSitterNode(root, source);
+    // A TSNode only borrows the tree. Keep the native owner alive even when
+    // the Qore tree object is a temporary or is explicitly deleted.
+    ref();
+    std::shared_ptr<TreeSitterTree> owner(const_cast<TreeSitterTree*>(this),
+        [](TreeSitterTree* value) { value->deref(); });
+    return new TreeSitterNode(root, std::move(owner));
 }
 
 TreeSitterTree* TreeSitterTree::copy() const {

@@ -21,6 +21,7 @@
 */
 
 #include "TreeSitterQueryCursor.h"
+#include "TreeSitterTree.h"
 
 TreeSitterQueryCursor::TreeSitterQueryCursor(TreeSitterQuery* query)
     : cursor(ts_query_cursor_new()), query(query) {
@@ -36,35 +37,57 @@ TreeSitterQueryCursor::~TreeSitterQueryCursor() {
 
 void TreeSitterQueryCursor::exec(TreeSitterNode* node) {
     std::lock_guard<std::mutex> lock(mutex);
-    source = node->getSource();
     ts_query_cursor_exec(cursor, query->getQuery(), node->getNode());
+    tree = node->getTreeOwner();
 }
 
 QoreHashNode* TreeSitterQueryCursor::nextMatch(ExceptionSink* xsink) {
     std::lock_guard<std::mutex> lock(mutex);
     TSQueryMatch match;
+    unsigned int checked = 0;
 
     while (ts_query_cursor_next_match(cursor, &match)) {
-        if (!query->evaluatePredicates(match.pattern_index, match, source)) {
+        if (!(checked++ % 100) && qore_check_cancel(xsink, "iterating tree-sitter query results")) {
+            return nullptr;
+        }
+        if (!query->evaluatePredicates(match.pattern_index, match, tree->getSource())) {
             continue;
         }
 
-        QoreHashNode* match_hash = new QoreHashNode(autoTypeInfo);
+        ReferenceHolder<QoreHashNode> match_hash(new QoreHashNode(autoTypeInfo), xsink);
         match_hash->setKeyValue("pattern_index", static_cast<int64>(match.pattern_index), xsink);
+        if (*xsink) {
+            return nullptr;
+        }
 
-        QoreListNode* captures = new QoreListNode(autoTypeInfo);
+        ReferenceHolder<QoreListNode> captures(new QoreListNode(autoTypeInfo), xsink);
         for (uint16_t i = 0; i < match.capture_count; i++) {
+            if (!(i % 100) && qore_check_cancel(xsink, "collecting tree-sitter query captures")) {
+                return nullptr;
+            }
             const TSQueryCapture& capture = match.captures[i];
 
-            QoreHashNode* capture_hash = new QoreHashNode(autoTypeInfo);
+            ReferenceHolder<QoreHashNode> capture_hash(new QoreHashNode(autoTypeInfo), xsink);
             uint32_t name_len;
             const char* name = ts_query_capture_name_for_id(query->getQuery(), capture.index, &name_len);
             capture_hash->setKeyValue("name", new QoreStringNode(name, name_len, QCS_UTF8), xsink);
-            capture_hash->setKeyValue("node", TreeSitterNode::buildNodeInfo(capture.node, source, xsink), xsink);
-            captures->push(capture_hash, xsink);
+            if (*xsink) {
+                return nullptr;
+            }
+            capture_hash->setKeyValue("node", TreeSitterNode::buildNodeInfo(capture.node, tree->getSource(), xsink), xsink);
+            if (*xsink) {
+                return nullptr;
+            }
+            captures->push(capture_hash.release(), xsink);
+            if (*xsink) {
+                return nullptr;
+            }
         }
-        match_hash->setKeyValue("captures", captures, xsink);
-        return match_hash;
+        match_hash->setKeyValue("captures", captures.release(), xsink);
+        if (*xsink) {
+            return nullptr;
+        }
+        return match_hash.release();
     }
 
     return nullptr;
@@ -73,23 +96,36 @@ QoreHashNode* TreeSitterQueryCursor::nextMatch(ExceptionSink* xsink) {
 QoreHashNode* TreeSitterQueryCursor::nextCapture(ExceptionSink* xsink) {
     std::lock_guard<std::mutex> lock(mutex);
     TSQueryMatch match;
+    unsigned int checked = 0;
     uint32_t capture_index;
 
     while (ts_query_cursor_next_capture(cursor, &match, &capture_index)) {
-        if (!query->evaluatePredicates(match.pattern_index, match, source)) {
+        if (!(checked++ % 100) && qore_check_cancel(xsink, "iterating tree-sitter query results")) {
+            return nullptr;
+        }
+        if (!query->evaluatePredicates(match.pattern_index, match, tree->getSource())) {
             ts_query_cursor_remove_match(cursor, match.id);
             continue;
         }
 
         const TSQueryCapture& capture = match.captures[capture_index];
 
-        QoreHashNode* capture_hash = new QoreHashNode(autoTypeInfo);
+        ReferenceHolder<QoreHashNode> capture_hash(new QoreHashNode(autoTypeInfo), xsink);
         uint32_t name_len;
         const char* name = ts_query_capture_name_for_id(query->getQuery(), capture.index, &name_len);
         capture_hash->setKeyValue("name", new QoreStringNode(name, name_len, QCS_UTF8), xsink);
+        if (*xsink) {
+            return nullptr;
+        }
         capture_hash->setKeyValue("pattern_index", static_cast<int64>(match.pattern_index), xsink);
-        capture_hash->setKeyValue("node", TreeSitterNode::buildNodeInfo(capture.node, source, xsink), xsink);
-        return capture_hash;
+        if (*xsink) {
+            return nullptr;
+        }
+        capture_hash->setKeyValue("node", TreeSitterNode::buildNodeInfo(capture.node, tree->getSource(), xsink), xsink);
+        if (*xsink) {
+            return nullptr;
+        }
+        return capture_hash.release();
     }
 
     return nullptr;

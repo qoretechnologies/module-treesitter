@@ -22,12 +22,10 @@
 
 #include "TreeSitterCursor.h"
 
-TreeSitterCursor::TreeSitterCursor(TreeSitterNode* node)
-    : source(node ? "" : "") {
+TreeSitterCursor::TreeSitterCursor(TreeSitterNode* node) {
     if (node) {
         cursor = ts_tree_cursor_new(node->getNode());
-        // Store source for creating nodes - use getSource() to avoid memory leak
-        source = node->getSource();
+        tree = node->getTreeOwner();
     }
 }
 
@@ -36,62 +34,76 @@ TreeSitterCursor::~TreeSitterCursor() {
 }
 
 void TreeSitterCursor::reset(TreeSitterNode* node) {
+    std::lock_guard<std::mutex> lock(mutex);
     if (node) {
         ts_tree_cursor_reset(&cursor, node->getNode());
+        tree = node->getTreeOwner();
     }
 }
 
 TreeSitterNode* TreeSitterCursor::getCurrentNode() const {
+    std::lock_guard<std::mutex> lock(mutex);
     TSNode node = ts_tree_cursor_current_node(&cursor);
     if (ts_node_is_null(node)) {
         return nullptr;
     }
-    return new TreeSitterNode(node, source);
+    return new TreeSitterNode(node, tree);
 }
 
 const char* TreeSitterCursor::getCurrentFieldName() const {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_current_field_name(&cursor);
 }
 
 TSFieldId TreeSitterCursor::getCurrentFieldId() const {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_current_field_id(&cursor);
 }
 
 bool TreeSitterCursor::gotoParent() {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_goto_parent(&cursor);
 }
 
 bool TreeSitterCursor::gotoNextSibling() {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_goto_next_sibling(&cursor);
 }
 
 bool TreeSitterCursor::gotoPrevSibling() {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_goto_previous_sibling(&cursor);
 }
 
 bool TreeSitterCursor::gotoFirstChild() {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_goto_first_child(&cursor);
 }
 
 bool TreeSitterCursor::gotoLastChild() {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_goto_last_child(&cursor);
 }
 
 int64_t TreeSitterCursor::gotoFirstChildForByte(uint32_t byte_offset) {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_goto_first_child_for_byte(&cursor, byte_offset);
 }
 
 int64_t TreeSitterCursor::gotoFirstChildForPoint(TSPoint point) {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_goto_first_child_for_point(&cursor, point);
 }
 
 uint32_t TreeSitterCursor::getCurrentDepth() const {
+    std::lock_guard<std::mutex> lock(mutex);
     return ts_tree_cursor_current_depth(&cursor);
 }
 
 TreeSitterCursor* TreeSitterCursor::copy() const {
-    TreeSitterCursor* new_cursor = new TreeSitterCursor(nullptr);
+    std::lock_guard<std::mutex> lock(mutex);
+    std::unique_ptr<TreeSitterCursor> new_cursor(new TreeSitterCursor(nullptr));
     new_cursor->cursor = ts_tree_cursor_copy(&cursor);
-    new_cursor->source = source;
-    return new_cursor;
+    new_cursor->tree = tree;
+    return new_cursor.release();
 }

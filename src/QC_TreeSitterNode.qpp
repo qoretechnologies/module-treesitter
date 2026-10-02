@@ -30,6 +30,8 @@
 /** The TreeSitterNode class represents a node in the syntax tree. Each node has a type
     (e.g., "function_definition", "identifier"), position information, and may have children.
 
+    Nodes retain their native syntax tree even after the originating Qore tree object is released.
+
     @since treesitter 1.0
 */
 qclass TreeSitterNode [arg=TreeSitterNode* node; ns=TreeSitter; vparent=Qore::Serializable];
@@ -54,7 +56,7 @@ TreeSitterNode::destructor() {
 */
 TreeSitterNode::copy() {
     self->setPrivate(CID_TREESITTERNODE,
-        new TreeSitterNode(node->getNode(), std::string(node->getText()->c_str())));
+        new TreeSitterNode(node->getNode(), node->getTreeOwner()));
 }
 
 //! Get the type of this node
@@ -381,25 +383,15 @@ foreach TreeSitterNode child in (children) {
 }
     @endcode
 */
-list<TreeSitterNode> TreeSitterNode::getChildren() {
-    std::vector<TreeSitterNode*> children = node->getChildren();
-    ReferenceHolder<QoreListNode> list(new QoreListNode(QC_TREESITTERNODE->getTypeInfo()), xsink);
-    for (TreeSitterNode* child : children) {
-        list->push(new QoreObject(QC_TREESITTERNODE, getProgram(), child), xsink);
-    }
-    return list.release();
+list<TreeSitterNode> TreeSitterNode::getChildren() [flags=RET_VALUE_ONLY] {
+    return node->getChildren(xsink);
 }
 
 //! Get all named children as a list
 /** @return a list of all named child nodes
 */
-list<TreeSitterNode> TreeSitterNode::getNamedChildren() {
-    std::vector<TreeSitterNode*> children = node->getNamedChildren();
-    ReferenceHolder<QoreListNode> list(new QoreListNode(QC_TREESITTERNODE->getTypeInfo()), xsink);
-    for (TreeSitterNode* child : children) {
-        list->push(new QoreObject(QC_TREESITTERNODE, getProgram(), child), xsink);
-    }
-    return list.release();
+list<TreeSitterNode> TreeSitterNode::getNamedChildren() [flags=RET_VALUE_ONLY] {
+    return node->getNamedChildren(xsink);
 }
 
 //! Get detailed information about this node as a hash

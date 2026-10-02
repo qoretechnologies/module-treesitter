@@ -6,6 +6,11 @@ Tree-sitter syntax parsing library bindings for the [Qore Programming Language](
 
 This module provides bindings to the [tree-sitter](https://tree-sitter.github.io/tree-sitter/) parsing library, enabling fast, incremental syntax parsing for multiple programming languages.
 
+Nodes and cursors keep their underlying syntax tree alive, so chained calls such
+as `parser.parse(source).getRootNode().hasError()` are supported. Copied nodes
+retain the complete source; resetting a traversal or query cursor also switches
+to the new tree's source.
+
 ## Supported Grammars
 
 - Python

@@ -35,7 +35,7 @@ class TreeSitterTree;
 class TreeSitterNode : public AbstractPrivateData {
 public:
     //! Create a node wrapper
-    DLLLOCAL TreeSitterNode(TSNode node, const std::string& source);
+    DLLLOCAL TreeSitterNode(TSNode node, std::shared_ptr<TreeSitterTree> tree);
 
     //! Destructor
     DLLLOCAL virtual ~TreeSitterNode();
@@ -121,11 +121,11 @@ public:
     //! Get the field name for a named child at the given index
     DLLLOCAL const char* getFieldNameForNamedChild(uint32_t named_child_index) const;
 
-    //! Get all children as a vector (caller must wrap in QoreObjects)
-    DLLLOCAL std::vector<TreeSitterNode*> getChildren() const;
+    //! Get all children with exception-safe ownership and cancellation
+    DLLLOCAL QoreListNode* getChildren(ExceptionSink* xsink) const;
 
-    //! Get all named children as a vector (caller must wrap in QoreObjects)
-    DLLLOCAL std::vector<TreeSitterNode*> getNamedChildren() const;
+    //! Get all named children with exception-safe ownership and cancellation
+    DLLLOCAL QoreListNode* getNamedChildren(ExceptionSink* xsink) const;
 
     //! Get the underlying TSNode
     DLLLOCAL TSNode getNode() const { return node; }
@@ -167,14 +167,19 @@ public:
     DLLLOCAL bool equals(TreeSitterNode* other) const;
 
     //! Get the full source string
-    DLLLOCAL const std::string& getSource() const { return source; }
+    DLLLOCAL const std::string& getSource() const;
+
+    //! Retain the syntax tree used by this node and its descendants
+    DLLLOCAL const std::shared_ptr<TreeSitterTree>& getTreeOwner() const { return tree; }
 
     //! Build a node_info hash for query results (shared utility)
     DLLLOCAL static QoreHashNode* buildNodeInfo(TSNode node, const std::string& src, ExceptionSink* xsink);
 
 private:
+    DLLLOCAL QoreListNode* getChildren(bool named, ExceptionSink* xsink) const;
+
     TSNode node;
-    std::string source;
+    const std::shared_ptr<TreeSitterTree> tree;
 };
 
 #endif // _QORE_TREESITTER_NODE_H

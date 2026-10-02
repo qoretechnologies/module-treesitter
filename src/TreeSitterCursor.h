@@ -88,8 +88,9 @@ public:
     DLLLOCAL TreeSitterCursor* copy() const;
 
 private:
-    TSTreeCursor cursor;
-    std::string source;
+    TSTreeCursor cursor{};
+    std::shared_ptr<TreeSitterTree> tree;
+    mutable std::mutex mutex;
 
     // Prevent copying (use copy() method instead)
     TreeSitterCursor(const TreeSitterCursor&) = delete;
