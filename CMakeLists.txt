@@ -290,6 +290,13 @@ set(module_name "treesitter")
 
 set(QORE_DOX_TMPL_SRC
   docs/mainpage.dox.tmpl
+    docs/guide-treesitter_classes.dox.tmpl
+    docs/guide-treesitter_error_handling.dox.tmpl
+    docs/guide-treesitter_examples.dox.tmpl
+    docs/guide-treesitter_languages.dox.tmpl
+    docs/guide-treesitter_release_notes.dox.tmpl
+    docs/guide-treesitterlicense.dox.tmpl
+    docs/guide-treesitterpackaging.dox.tmpl
 )
 
 add_library(${module_name} MODULE ${CPP_SRC} ${QPP_SOURCES})
@@ -314,7 +321,15 @@ endif()
 set(DOXYGEN_IMAGE_PATH ${CMAKE_SOURCE_DIR}/docs/images CACHE STRING "Doxygen image path" FORCE)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/images)
 
-set(MODULE_DOX_INPUT ${CMAKE_BINARY_DIR})
+list(APPEND MODULE_DOX_INPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-treesitter_classes.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-treesitter_error_handling.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-treesitter_examples.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-treesitter_languages.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-treesitter_release_notes.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-treesitterlicense.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-treesitterpackaging.dox
+)
 qore_external_binary_module(${module_name} ${PROJECT_VERSION})
 
 qore_dist(${PROJECT_VERSION})

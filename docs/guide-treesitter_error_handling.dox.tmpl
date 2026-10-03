@@ -1,0 +1,33 @@
+/* Copyright (C) 2026 Qore Technologies, s.r.o. */
+
+/** @page treesitter_error_handlingguide Error Handling
+
+    @tableofcontents
+
+    Tree-sitter performs error recovery during parsing, so you always get a valid tree
+    even for invalid syntax. You can detect errors using:
+
+    @code{.py}
+TreeSitterTree tree = parser.parse("def incomplete(");
+TreeSitterNode root = tree.getRootNode();
+
+if (root.hasError()) {
+    printf("Syntax errors detected!\n");
+
+    # Find error nodes
+    sub findErrors(TreeSitterNode node) {
+        if (node.isMissing()) {
+            printf("Missing node at %d:%d\n",
+                   node.getStartPoint().row, node.getStartPoint().column);
+        }
+        if (node.getType() == "ERROR") {
+            printf("Error node: %s\n", node.getText());
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            findErrors(node.getChild(i));
+        }
+    }
+    findErrors(root);
+}
+    @endcode
+*/

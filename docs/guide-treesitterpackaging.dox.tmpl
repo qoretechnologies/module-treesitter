@@ -1,0 +1,15 @@
+/* Copyright (C) 2026 Qore Technologies, s.r.o. */
+
+/** @page treesitterpackagingguide Packaging and query resources
+
+    @tableofcontents
+
+    Debian/Ubuntu packages include all parsers, upstream queries, compiler metadata,
+    API documentation and debug symbols. They use a shared system tree-sitter runtime
+    and pinned offline grammar sources. The Qore grammar comes from the matching SDK.
+    SQL uses the committed generated parser without modifying downloaded sources.
+
+    Set \c QORE_TREESITTER_QUERY_DIR to select an alternate query root containing language
+    subdirectories. Cached queries are keyed by canonical filename and respect the current
+    caller's filesystem sandbox. Query-loading methods require filesystem access.
+*/
