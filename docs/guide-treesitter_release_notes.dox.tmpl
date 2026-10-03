@@ -5,17 +5,5 @@
     @tableofcontents
 
     @section treesitter_v1_0 treesitter Module Version 1.0
-
-    - Nodes and traversal/query cursors retain their underlying syntax trees after temporary or deleted tree
-      objects are released. Copying a child preserves its complete source, and resetting a cursor updates
-      both the syntax tree and source used by subsequent nodes.
-    - Compile the installed Qore grammar's external scanner when present, fixing unresolved scanner symbols on macOS
-      and enabling Qore brace-delimited regular expressions. Older grammars without a scanner remain supported.
-    - Build the pinned Python and YAML grammars without unused-value warnings; source fixes are hash-checked
-      and written only to the build tree, with unchanged scanner and lexer behavior.
-    - Initial release with support for Python, Java, JSON, YAML, JavaScript (js), Kotlin (kt), TypeScript (ts), and
-      TSX
-    - Full tree-sitter API: parsing, tree traversal, cursors, and queries
-    - Incremental parsing support
-    - Query pattern matching for syntax highlighting and code analysis
+    - initial release
 */
