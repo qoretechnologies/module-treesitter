@@ -4,13 +4,26 @@
 
     @tableofcontents
 
-    The module includes built-in grammars for the following languages:
-    - Python
-    - Java
-    - JSON
-    - YAML
-    - JavaScript
-    - Kotlin
-    - TypeScript
-    - TSX
+    Pass one of the following language names to
+    @ref TreeSitter::TreeSitterParser::constructor(string) "TreeSitterParser::constructor()":
+
+    |!Grammar|!Language name|!Alias
+    |Python|\c python|None
+    |Java|\c java|None
+    |JSON|\c json|None
+    |YAML|\c yaml|None
+    |JavaScript|\c javascript|\c js
+    |Kotlin|\c kotlin|\c kt
+    |TypeScript|\c typescript|\c ts
+    |TSX (TypeScript with JSX)|\c tsx|None
+    |SQL|\c sql|None
+    |Markdown|\c markdown|\c md
+    |Qore|\c qore|None
+
+    @ref TreeSitter::TreeSitterParser::getSupportedLanguages() "TreeSitterParser::getSupportedLanguages()"
+    returns the language names in the table, without aliases.
+
+    @note The Qore tree-sitter grammar is provided by the \c astparser module built into Qore 3.0 and later.
+    The \c treesitter module reuses the grammar from \c modules/astparser/grammars/tree-sitter-qore/ in the
+    <a href="https://github.com/qoretechnologies/qore">Qore repository</a>.
 */

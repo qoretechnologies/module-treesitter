@@ -8,6 +8,23 @@
     incremental parsing library for Qore. Tree-sitter is a parser generator tool and incremental parsing library that
     can build a concrete syntax tree for a source file and efficiently update the syntax tree as the source file is edited.
 
+    <b>Supported grammars:</b>
+    - Python
+    - Java
+    - JSON
+    - YAML
+    - JavaScript
+    - Kotlin
+    - TypeScript
+    - TSX (TypeScript with JSX)
+    - SQL
+    - Markdown
+    - Qore
+
+    @note The Qore tree-sitter grammar is provided by the \c astparser module built into Qore 3.0 and later.
+    The \c treesitter module reuses that grammar, maintained in the
+    <a href="https://github.com/qoretechnologies/qore">Qore repository</a>, and exposes it as the \c qore parser language.
+
     This module is particularly useful for:
     - Syntax highlighting
     - Code navigation and analysis
@@ -16,10 +33,6 @@
     - Code transformation tools
 
     To use this module, use \c "%requires treesitter" in your code.
-
-    @note The Qore tree-sitter grammar is maintained in the
-    <a href="https://github.com/qoretechnologies/qore">Qore repository</a> as part of the \c astparser
-    module (\c modules/astparser/grammars/tree-sitter-qore/).
 
     @section treesitterdocumentation Documentation
 

@@ -23,8 +23,11 @@ to the new tree's source.
 - TSX
 - SQL
 - Markdown
+- Qore
 
-**Note:** The Qore tree-sitter grammar is maintained in the [Qore repository](https://github.com/qoretechnologies/qore) as part of the `astparser` module (`modules/astparser/grammars/tree-sitter-qore/`).
+**Note:** The Qore tree-sitter grammar is provided by the `astparser` module built into Qore 3.0 and later.
+The `treesitter` module reuses that grammar, maintained in the [Qore repository](https://github.com/qoretechnologies/qore)
+at `modules/astparser/grammars/tree-sitter-qore/`, and exposes it as the `qore` parser language.
 The build uses the installed grammar's `parser.c` and, when present, `scanner.c` for brace-delimited regular expressions
 such as `value =~ m{^abc$}i;`. Install the matching astparser grammar files before rebuilding this module.
 

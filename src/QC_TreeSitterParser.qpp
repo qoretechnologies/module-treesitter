@@ -168,7 +168,8 @@ int TreeSitterParser::getTimeout() {
     @par Example:
     @code{.py}
 list<string> langs = TreeSitterParser::getSupportedLanguages();
-# Returns: ("python", "java", "json", "yaml", "javascript", "kotlin", "typescript", "tsx", "qore")
+# Returns: ("python", "java", "json", "yaml", "javascript", "kotlin", "typescript",
+#           "tsx", "sql", "markdown", "qore")
     @endcode
 */
 static list<string> TreeSitterParser::getSupportedLanguages() {
