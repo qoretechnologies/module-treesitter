@@ -100,6 +100,8 @@ applied to private build-tree copies. Scanner stack pops explicitly discard
 unused values; YAML removes an unused whitespace variable and documents its
 intentional tag-scanner fallthroughs. Its EOF-only internal lexer omits generic
 character-lookahead state while preserving token and callback behavior.
+YAML scanner results use a signed enumeration so malformed URI escapes retain
+their failure status on architectures where plain `char` is unsigned, including ARM.
 Downloaded grammar sources remain unchanged. Updating either grammar requires
 reviewing the source hashes and fixes together.
 
@@ -109,7 +111,8 @@ To validate these fixes against unpacked pinned grammar sources:
 python3 test/test_grammar_fixes.py /path/to/tree-sitter-python-0.25.0 /path/to/tree-sitter-yaml-0.7.2 -v
 ```
 
-The checks compile every fixed source with warnings as errors, verify immutable
+The checks compile every fixed source with both signed and unsigned `char` and
+warnings as errors, exercise valid and malformed URI escapes, verify immutable
 inputs and repeatable outputs, reject missing or unexpected sources, and compare
 all 65,536 YAML lexer states under eight EOF/lookahead combinations. The Qore
 suite additionally covers indentation, quotes, block scalars, tags, malformed

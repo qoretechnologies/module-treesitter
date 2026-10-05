@@ -511,6 +511,11 @@ class TreeSitterTest inherits QUnit::Test {
         }
         assertTrue(parser.parse("key: [unterminated").getRootNode().hasError());
         assertTrue(parser.parse("key: !<tag:broken value").getRootNode().hasError());
+        foreach string tag in ("!<tag:example.com,2026:%>", "!<tag:example.com,2026:%G0>",
+                "!<tag:example.com,2026:%0Z>") {
+            assertTrue(parser.parse("key: " + tag + " value\n").getRootNode().hasError(), tag);
+            assertFalse(parser.parse("key: !<tag:example.com,2026:%41> value\n").getRootNode().hasError());
+        }
         assertFalse(parser.parse("after_error: valid\n").getRootNode().hasError());
     }
 

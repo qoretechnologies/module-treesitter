@@ -6,4 +6,6 @@
 
     @section treesitter_v1_0 treesitter Module Version 1.0
     - initial release
+    - Preserve YAML URI-escape failure results on platforms with unsigned plain
+      char, including ARM; reject malformed escapes without looping in the tag scanner.
 */

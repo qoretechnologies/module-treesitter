@@ -49,13 +49,81 @@ file(WRITE "{root}/result.txt" "${{actual}}")
                 self.assertEqual(0, result.returncode, result.stderr)
                 self.assertEqual(digest, hashlib.sha256(target.read_bytes()).hexdigest())
                 self.assertEqual(stamp, target.stat().st_mtime_ns)
-                result = subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2',
-                                         '-I', str(SOURCES[language]), '-c', str(target), '-o', str(root / 'test.o')],
-                                        capture_output=True, text=True)
-                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                for signedness in ('-fsigned-char', '-funsigned-char'):
+                    with self.subTest(signedness=signedness):
+                        result = subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2',
+                                                 signedness, '-I', str(SOURCES[language]), '-c', str(target),
+                                                 '-o', str(root / 'test.o')], capture_output=True, text=True)
+                        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
     def test_changed_source_is_rejected(self):
         self.assert_rejected('changed', 'Unexpected')
+
+    def test_yaml_status_preserves_failure_with_either_char_signedness(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result, _ = self.patch(root, 'yaml', 'scanner.c')
+            self.assertEqual(0, result.returncode, result.stderr)
+            target = Path((root / 'result.txt').read_text())
+            test = '#include "' + str(target) + '"\n#include <assert.h>\n'
+            test += r'''
+typedef struct {
+    TSLexer lexer;
+    const unsigned char *input;
+    unsigned position;
+    unsigned marks;
+} StatusProbe;
+static void probe_advance(TSLexer *lexer, bool skip) {
+    StatusProbe *p = (StatusProbe *)lexer;
+    assert(!skip);
+    assert(p->input[p->position] != 0);
+    lexer->lookahead = p->input[++p->position];
+}
+static void probe_mark_end(TSLexer *lexer) {
+    ++((StatusProbe *)lexer)->marks;
+}
+int main(void) {
+    const struct {
+        const char *input;
+        int status;
+        unsigned consumed;
+        unsigned marks;
+    } cases[] = {
+        {"", SCN_STOP, 0, 0}, {" ", SCN_STOP, 0, 0},
+        {"%", SCN_FAIL, 1, 1}, {"%G0", SCN_FAIL, 1, 1},
+        {"%0", SCN_FAIL, 2, 1}, {"%0Z", SCN_FAIL, 2, 1},
+        {"%00", SCN_SUCC, 3, 1}, {"%41 ", SCN_SUCC, 3, 1},
+        {"%ff", SCN_SUCC, 3, 1},
+    };
+    ScanResult (*functions[])(Scanner *, TSLexer *) = {
+        scn_uri_esc, scn_ns_uri_char, scn_ns_tag_char,
+    };
+    for (unsigned f = 0; f < sizeof(functions) / sizeof(functions[0]); ++f) {
+        for (unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+            Scanner scanner = {0};
+            StatusProbe p = {0};
+            p.input = (const unsigned char *)cases[i].input;
+            p.lexer.lookahead = p.input[0];
+            p.lexer.advance = probe_advance;
+            p.lexer.mark_end = probe_mark_end;
+            assert(functions[f](&scanner, &p.lexer) == cases[i].status);
+            assert(p.position == cases[i].consumed);
+            assert(p.marks == cases[i].marks);
+        }
+    }
+    return 0;
+}
+'''
+            path = root / 'status.c'
+            path.write_text(test)
+            for signedness in ('-fsigned-char', '-funsigned-char'):
+                with self.subTest(signedness=signedness):
+                    binary = root / ('status' + signedness)
+                    result = subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2',
+                                             signedness, '-I', str(SOURCES['yaml']), str(path),
+                                             '-o', str(binary)], capture_output=True, text=True)
+                    self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                    subprocess.run([str(binary)], check=True, timeout=30)
 
     def test_missing_source_is_rejected(self):
         self.assert_rejected('missing', 'SHA256')
