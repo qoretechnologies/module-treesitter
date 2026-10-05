@@ -12,28 +12,28 @@
 %bcond_without docs
 Name: qore-treesitter-module
 Version: 1.0.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Incremental syntax parsing and queries for Qore
 License: LGPL-2.1-or-later AND LGPL-2.1-only AND MIT
 URL: https://github.com/qoretechnologies/module-treesitter
-Source0: %{name}-%{version}.tar.xz
-Source1: tree-sitter-python-0.25.0.tar.xz
+Source0: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/%{name}-%{version}.tar.xz
+Source1: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-python-0.25.0.tar.xz
 Provides: bundled(tree-sitter-python) = 0.25.0
-Source2: tree-sitter-java-0.23.5.tar.xz
+Source2: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-java-0.23.5.tar.xz
 Provides: bundled(tree-sitter-java) = 0.23.5
-Source3: tree-sitter-json-0.24.8.tar.xz
+Source3: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-json-0.24.8.tar.xz
 Provides: bundled(tree-sitter-json) = 0.24.8
-Source4: tree-sitter-yaml-0.7.2.tar.xz
+Source4: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-yaml-0.7.2.tar.xz
 Provides: bundled(tree-sitter-yaml) = 0.7.2
-Source5: tree-sitter-javascript-0.25.0.tar.xz
+Source5: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-javascript-0.25.0.tar.xz
 Provides: bundled(tree-sitter-javascript) = 0.25.0
-Source6: tree-sitter-kotlin-0.3.8.tar.xz
+Source6: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-kotlin-0.3.8.tar.xz
 Provides: bundled(tree-sitter-kotlin) = 0.3.8
-Source7: tree-sitter-typescript-0.23.2.tar.xz
+Source7: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-typescript-0.23.2.tar.xz
 Provides: bundled(tree-sitter-typescript) = 0.23.2
-Source8: tree-sitter-sql-0.3.11.tar.xz
+Source8: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-sql-0.3.11.tar.xz
 Provides: bundled(tree-sitter-sql) = 0.3.11
-Source9: tree-sitter-markdown-0.5.3.tar.xz
+Source9: https://api.opensuse.org/public/source/home:davidnichols:qore:testing/%{name}/tree-sitter-markdown-0.5.3.tar.xz
 Provides: bundled(tree-sitter-markdown) = 0.5.3
 BuildRequires: cmake >= 3.21
 BuildRequires: make
@@ -46,15 +46,15 @@ BuildRequires: python3
 %endif
 %if %{with docs}
 BuildRequires: doxygen
+%endif
 %if 0%{?suse_version}
 BuildRequires: util-linux
 %else
 BuildRequires: util-linux-core
 %endif
-%endif
 
 %description
-Native incremental parsers, syntax trees, cursors and structural queries for
+Incremental parsing, syntax trees, cursors and structural queries for
 Qore, Python, Java, JSON, YAML, JavaScript, Kotlin, TypeScript, TSX, SQL and
 Markdown. Includes installed query resources and compiler metadata. Uses the
 system tree-sitter runtime and pinned private grammars with hidden symbols.
@@ -129,6 +129,9 @@ cmake --build build --target docs -- %{?_smp_mflags}
 %install
 DESTDIR=%{buildroot} cmake --install build
 chmod 755 %{buildroot}%{_libdir}/qore-modules/treesitter-api-*.qmod
+install -d %{buildroot}%{_licensedir}/%{name}
+cp -a COPYING.LGPL COPYING.GPL grammar-licenses %{buildroot}%{_licensedir}/%{name}/
+hardlink -t -O %{buildroot}%{_licensedir}/%{name}
 %if %{with docs}
 install -d %{buildroot}%{_docdir}/%{name}-doc
 cp -a build/docs/treesitter/html %{buildroot}%{_docdir}/%{name}-doc/
@@ -137,6 +140,11 @@ hardlink -t -O %{buildroot}%{_docdir}/%{name}-doc
 
 %check
 %if %{with tests}
+diff -r grammar-licenses %{buildroot}%{_licensedir}/%{name}/grammar-licenses
+cmp COPYING.LGPL %{buildroot}%{_licensedir}/%{name}/COPYING.LGPL
+cmp COPYING.GPL %{buildroot}%{_licensedir}/%{name}/COPYING.GPL
+test %{buildroot}%{_licensedir}/%{name}/grammar-licenses/tree-sitter-json/LICENSE -ef \
+  %{buildroot}%{_licensedir}/%{name}/grammar-licenses/tree-sitter-javascript/LICENSE
 python3 -B -W error test/test_grammar_fixes.py tree-sitter-python-0.25.0 tree-sitter-yaml-0.7.2 -v
 . %{_rpmconfigdir}/qore/module-env.sh
 QORE_TREESITTER_QUERY_DIR=$PWD/build/queries /usr/bin/qore -b --enable-debug \
@@ -144,7 +152,7 @@ QORE_TREESITTER_QUERY_DIR=$PWD/build/queries /usr/bin/qore -b --enable-debug \
 %endif
 
 %files
-%license COPYING.LGPL COPYING.GPL grammar-licenses
+%license %{_licensedir}/%{name}/
 %doc README.md rpm/README.rst qore-grammar-build-source.txt
 %{_libdir}/qore-modules/treesitter-api-*.qmod
 %dir %{_datadir}/qore/metadata/treesitter
@@ -157,6 +165,10 @@ QORE_TREESITTER_QUERY_DIR=$PWD/build/queries /usr/bin/qore -b --enable-debug \
 %endif
 
 %changelog
+* Mon Oct 05 2026 David Nichols <david@qore.org> - 1.0.0-2
+- Preserve every grammar license path and byte while hard-linking identical notices.
+- Point repacked sources to their public OBS downloads.
+
 * Fri Oct 02 2026 David Nichols <david@qore.org> - 1.0.0-1
 - Package native parsers, compiler metadata and query resources for all languages.
 - Retain pinned grammar licenses and Qore SDK grammar source provenance.

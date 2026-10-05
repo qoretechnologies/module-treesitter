@@ -26,6 +26,8 @@ The Qore grammar is copyright 2026 Qore Technologies, s.r.o., licensed under
 LGPL 2.1 (the scanner permits later versions); COPYING.LGPL and COPYING.GPL
 provide the license texts. Each MIT grammar retains its original notice in
 its own directory under grammar-licenses.
+Identical license notices are hard-linked within the runtime package. The check
+phase compares every notice against its pinned source and verifies shared storage.
 
 Repository qualification uses the default test/documentation options, then
 runs the complete suite outside the checkout with QORE_TREESITTER_QUERY_DIR
@@ -52,3 +54,6 @@ In an SDK image, run the installed compiler example with
 qualified for Fedora 44, Leap 16.0 and EL10 against candidate 3. The runtime
 images contained neither qore-devel nor gcc/gcc-c++; RPM verification passed.
 Final canonical builds use the final qualified Qore SDK and remain a release gate.
+
+Repacked source URLs refer to the public OBS source package. Qualification verifies
+their downloaded digests against the prepared manifest after each upload.
