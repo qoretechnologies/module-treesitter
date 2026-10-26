@@ -1322,12 +1322,19 @@ class TreeSitterTest inherits QUnit::Test {
 
         Program program(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES | PO_NO_EMBEDDED_LOGIC);
         program.loadModule("treesitter");
-        program.parse("string sub query() { return TreeSitterParser::getHighlightQuery(\"python\"); }",
+        program.parse("string sub query() { return TreeSitterParser::getHighlightQuery(\"python\"); }"
+            "auto sub through(code c) { return c(); }",
             "query-sandbox");
         SandboxManager sandbox();
         sandbox.setFilesystemSandboxRoot(second);
         program.setSandboxManager(sandbox);
         assertThrows("FILESYSTEM-ACCESS-DENIED", \program.callFunction(), ("query",));
+        # the same code called directly from the sandbox inherits the sandbox's policy
+        code read_query = string sub () { return TreeSitterParser::getHighlightQuery("python"); };
+        assertThrows("FILESYSTEM-ACCESS-DENIED", \program.callFunction(), ("through", read_query));
+        # a system-policy capability called from the sandbox is subject to the system policy, not the sandbox's
+        assertEq("(identifier) @first", program.callFunction("through",
+            SandboxManager::createSystemPolicyCall(read_query)), "a query file is read in a system-policy capability");
         setenv("QORE_TREESITTER_QUERY_DIR", second);
         assertEq("(identifier) @second", program.callFunction("query"));
 

@@ -162,7 +162,7 @@ QoreStringNode* TreeSitterLanguages::getQuery(const char* name, const char* quer
 
     // Check the current caller even on a cache hit: a query cached by a privileged
     // program must never bypass the filesystem policy of a later caller.
-    QoreSandboxManagerHelper smh;
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
     if (smh && !smh->checkFilesystemAccess(path.c_str(), QSEC_READ, xsink)) {
         return nullptr;
     }
