@@ -44,6 +44,9 @@ static void treesitter_module_init(QoreModuleInitContext& ctx, ExceptionSink& xs
 static void treesitter_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink);
 static void treesitter_module_delete();
 
+// the module's namespace; purged when the module is deleted (see QoreModuleInfo::ns)
+QoreNamespace TreeSitterNS("TreeSitter");
+
 extern "C" DLLEXPORT void treesitter_qore_module_desc(QoreModuleInfo& mod_info) {
     mod_info.name = "treesitter";
     mod_info.version = TREESITTER_MODULE_VERSION;
@@ -55,12 +58,13 @@ extern "C" DLLEXPORT void treesitter_qore_module_desc(QoreModuleInfo& mod_info) 
     mod_info.init = treesitter_module_init;
     mod_info.ns_init = treesitter_module_ns_init;
     mod_info.del = treesitter_module_delete;
+#ifdef QORE_HAS_MODULE_NS_PURGE
+    // the namespace is purged when the module is deleted, before the types are freed (see QoreModuleInfo::ns)
+    mod_info.ns = &TreeSitterNS;
+#endif
     mod_info.license = QL_LGPL;
     mod_info.license_str = "LGPL-2.1-or-later";
 }
-
-// Module namespace
-QoreNamespace TreeSitterNS("TreeSitter");
 
 void raiseTreeSitterException(ExceptionSink* xsink, const char* err, const char* fmt, ...) {
     QoreStringNode* desc = new QoreStringNode();
